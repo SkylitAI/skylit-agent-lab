@@ -25,6 +25,22 @@ def run_experiment(*options, script=PACKAGE / "run.py", cwd=ROOT, utf8=True, asc
 
 
 class PackageSetupTests(unittest.TestCase):
+    def test_invalid_time_options_preserve_output_and_do_not_create_parents(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "new" / "report.md"
+            existing = Path(directory) / "existing.md"
+            existing.write_text("Keep this report.\n")
+            for option, value in (("--reference-time", "2026-10-01T14:01:00"),
+                                  ("--max-age-seconds", "nan"), ("--max-age-seconds", "86401")):
+                for destination in (output, existing):
+                    result = run_experiment("--kit", directory, option, value, "--output", destination)
+                    self.assertEqual(result.returncode, 1)
+                    self.assertIn(option, result.stderr)
+                    self.assertNotIn("Traceback", result.stderr)
+                    self.assertEqual(result.stdout, "")
+                    self.assertFalse(output.parent.exists())
+                    self.assertEqual(existing.read_text(), "Keep this report.\n")
+
     def test_kit_path_is_explicit_and_bad_checkout_error_is_actionable(self):
         result = run_experiment()
         self.assertEqual(result.returncode, 2)
@@ -94,7 +110,8 @@ class WatchlistInvestigatorTests(unittest.TestCase):
             scripts.mkdir()
             for name in ("run.py", "fixture.json"):
                 shutil.copy2(PACKAGE / name, copied / name)
-            shutil.copy2(ROOT / "scripts" / "probe_kit_watchlist.py", scripts)
+            for name in ("probe_kit_watchlist.py", "watchlist_time.py"):
+                shutil.copy2(ROOT / "scripts" / name, scripts)
             result = run_experiment("--kit", KIT.resolve(), script=copied / "run.py", cwd=root)
             self.assertEqual(result.returncode, 0, result.stderr)
             output = copied / "reports" / "watchlist.md"
@@ -138,6 +155,32 @@ class WatchlistInvestigatorTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn("source king: 110 / -199", output.read_text())
             self.assertNotIn("-180", output.read_text())
+
+    def test_source_time_evidence_preserves_kit_gaps_and_compares_explicit_reference(self):
+        fixture = json.loads((PACKAGE / "fixture.json").read_text())
+        fixture["gamma"]["data"]["symbols"][0]["asOf"] = "invalid"
+        fixture["vanna"]["data"]["symbols"][0]["asOf"] = "2026-10-01T14:01:00+02:00"
+        fixture["flow"]["SPY"]["meta"]["timestamp"] = "2026-10-01T14:02:00Z"
+        fixture["flow"]["SPY"]["data"]["trades"][0]["timestamp"] = "2026-10-01T13:55:30"
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "fixture.json"
+            path.write_text(json.dumps(fixture))
+            for minute, age in (("01", "-60 | future"), ("03", "60 | within threshold")):
+                output = Path(directory) / f"report-{minute}.md"
+                result = run_experiment("--kit", KIT.resolve(), "--fixture", path, "--output", output,
+                                        "--symbols", "SPY,QQQ,SPXW", "--max-age-seconds", "60",
+                                        "--reference-time", f"2026-10-01T14:{minute}:00Z")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                report = output.read_text()
+                self.assertIn("| SPY | flow.generated_at | 2026-10-01T14:02:00+00:00 | " + age + " |", report)
+                self.assertIn("| SPY | gamma.as_of | unavailable | unavailable | timestamp missing or invalid; invalid or missing heatmap fields |", report)
+                self.assertIn("timestamp missing or invalid; partial: 1 invalid trades", report)
+                self.assertIn("| QQQ | vanna.as_of | unavailable | unavailable | timestamp missing or invalid; missing from heatmap response |", report)
+                self.assertIn("| SPXW | flow.latest_trade | unavailable | unavailable | timestamp missing or invalid; missing from synthetic fixture |", report)
+                self.assertIn("observed timestamp span 7260 seconds across 2 valid fields", report)
+                self.assertIn("| stale |", report)
+                self.assertNotIn("source king: 110 / -180", report)
+                self.assertIn("largest returned magnitude: 115 / 60", report)
 
     def test_invalid_input_never_creates_or_truncates_report(self):
         with tempfile.TemporaryDirectory() as directory:
