@@ -1,8 +1,10 @@
 # Watchlist limit verification
 
 The pinned Kit stops a Watchlist plan when credentials, account access or the
-available request/credit budget cannot cover it. HTTP failures and malformed
-responses stop the run without automatic retries. These are **offline tests**
+available request/credit budget cannot cover it. The checked global HTTP failures,
+transport errors and invalid JSON stop the run without retries. HTTP 404 and
+some malformed component fields are recorded while remaining calls continue.
+These are **offline tests**
 using synthetic accounts and mocked transport, not service-access certification.
 
 Checked on 2026-10-01 with Kit commit
