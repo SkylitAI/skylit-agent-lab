@@ -1,5 +1,7 @@
 """Local setup refuses invalid sources and never repurposes existing paths."""
 
+import io
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -48,6 +50,83 @@ class SetupPreflightTests(unittest.TestCase):
         return setup.validate_sources(values.get("lab", self.lab), values.get("kit", self.kit),
                                       values.get("destination", self.dest))
 
+    def commit(self, root):
+        self.command("add", ".", cwd=root)
+        self.command("-c", "user.name=Test", "-c", "user.email=test@example.invalid",
+                     "commit", "-qm", "synthetic setup behavior", cwd=root)
+
+    def add_synthetic_runner(self, *, fail=False):
+        code = "import sys\nsys.exit(1)\n" if fail else '''import os, sys
+from pathlib import Path
+assert sys.flags.utf8_mode == 1
+assert 'SKYLIT_API_KEY' not in os.environ
+assert 'OPENAI_API_KEY' not in os.environ
+out = Path(sys.argv[sys.argv.index('--output') + 1])
+out.parent.mkdir(parents=True, exist_ok=True)
+with out.open('x', encoding='utf-8') as stream:
+    stream.write('Synthetic café — no credentials or service calls.\\n')
+'''
+        (self.lab / "experiments/watchlist-investigator/run.py").write_text(code, encoding="utf-8")
+        (self.lab / ".gitignore").write_text(".env\nreports/\n", encoding="utf-8")
+        self.commit(self.lab)
+
+    def test_complete_workspace_uses_commits_utf8_and_excludes_ignored_inputs(self):
+        self.add_synthetic_runner()
+        (self.lab / ".env").write_text("synthetic private sentinel")
+        (self.lab / "reports").mkdir()
+        (self.lab / "reports/private.md").write_text("synthetic report sentinel")
+        with patch.dict(os.environ, {"SKYLIT_API_KEY": "synthetic-test-key", "OPENAI_API_KEY": "synthetic"}):
+            message = setup.prepare_workspace(self.lab, self.kit, self.dest)
+        self.assertIn("Prepared local workspace", message)
+        self.assertFalse((self.dest / ".setup-incomplete").exists())
+        self.assertFalse((self.dest / "lab/.env").exists())
+        self.assertFalse((self.dest / "lab/reports/private.md").exists())
+        report = self.dest / "reports/watchlist.md"
+        self.assertEqual(report.read_text(encoding="utf-8"), "Synthetic café — no credentials or service calls.\n")
+        metadata = json.loads((self.dest / "setup.json").read_text())
+        self.assertEqual(metadata["kit_revision"], self.pin)
+        self.assertEqual(metadata["lab_revision"], self.command("rev-parse", "HEAD", cwd=self.lab))
+        self.assertEqual(self.command("rev-parse", "HEAD", cwd=self.dest / "kit"), self.pin)
+        self.assertEqual(self.command("status", "--porcelain", cwd=self.lab), "")
+        self.assertEqual(self.command("status", "--porcelain", cwd=self.kit), "")
+        self.assertEqual((self.lab / ".env").read_text(), "synthetic private sentinel")
+        if os.name != "nt":
+            self.assertEqual(self.dest.stat().st_mode & 0o777, 0o700)
+
+    def test_incomplete_clone_and_renderer_failure_are_marked_and_never_reused(self):
+        self.add_synthetic_runner(fail=True)
+        with self.assertRaisesRegex(setup.SetupError, "private incomplete destination is retained"):
+            setup.prepare_workspace(self.lab, self.kit, self.dest)
+        self.assertTrue((self.dest / ".setup-incomplete").is_file())
+        self.assertFalse((self.dest / "run_watchlist.py").exists())
+        self.assertFalse((self.dest / "setup.json").exists())
+        with self.assertRaisesRegex(setup.SetupError, "already exists"):
+            setup.prepare_workspace(self.lab, self.kit, self.dest)
+        original_git = setup.git
+        def fail_clone(args, **kwargs):
+            if "clone" in args:
+                raise setup.SetupError("Local clone failed")
+            return original_git(args, **kwargs)
+        other = self.root / "failed clone"
+        with patch.object(setup, "git", side_effect=fail_clone):
+            with self.assertRaisesRegex(setup.SetupError, "Local clone failed.*incomplete"):
+                setup.prepare_workspace(self.lab, self.kit, other)
+        self.assertTrue((other / ".setup-incomplete").is_file())
+
+    def test_unprintable_destination_and_creation_race_preserve_paths(self):
+        output = io.TextIOWrapper(io.BytesIO(), encoding="ascii")
+        unicode_dest = self.root / "café"
+        with patch.object(setup.sys, "stdout", output):
+            with self.assertRaisesRegex(setup.SetupError, "cannot be displayed"):
+                setup.prepare_workspace(self.lab, self.kit, unicode_dest)
+        self.assertFalse(unicode_dest.exists())
+        validated = self.validate()
+        self.dest.mkdir()
+        with patch.object(setup, "validate_sources", return_value=validated):
+            with self.assertRaisesRegex(setup.SetupError, "already exists"):
+                setup.prepare_workspace(self.lab, self.kit, self.dest)
+        self.assertEqual(list(self.dest.iterdir()), [])
+
     def test_valid_local_inputs_make_no_destination(self):
         result = self.validate()
         self.assertEqual(result[:3], (self.lab.resolve(), self.kit.resolve(), self.dest.resolve()))
@@ -72,6 +151,13 @@ class SetupPreflightTests(unittest.TestCase):
                 self.validate()
             self.assertEqual(extra.read_text(), "preserve me")
             extra.unlink()
+        tracked = self.kit / "skylit_agent_kit/watchlist.py"
+        tracked.write_text("# Changed synthetic module.\n")
+        with self.assertRaisesRegex(setup.SetupError, "checkout must be clean"):
+            self.validate()
+        self.command("add", ".", cwd=self.kit)
+        with self.assertRaisesRegex(setup.SetupError, "checkout must be clean"):
+            self.validate()
         self.assertFalse(self.dest.exists())
 
     def test_existing_destinations_and_broken_symlinks_are_preserved(self):
@@ -101,3 +187,51 @@ class SetupPreflightTests(unittest.TestCase):
         self.assertNotIn("SKYLIT_API_KEY", env)
         self.assertNotIn("OPENAI_API_KEY", env)
         self.assertEqual(env["GIT_TERMINAL_PROMPT"], "0")
+
+
+KIT = Path(os.environ.get("SKYLIT_AGENT_KIT", ROOT.parent / "skylit-agent-kit"))
+
+
+@unittest.skipUnless(KIT.is_dir(), "Setup integration unverified: set SKYLIT_AGENT_KIT to the pinned checkout")
+class RealWorkspaceTests(unittest.TestCase):
+    def test_real_workspace_and_reusable_launcher_preserve_outputs(self):
+        with tempfile.TemporaryDirectory(prefix="real Watchlist café ") as directory:
+            root = Path(directory)
+            lab = root / "source lab"
+            git_path = setup.shutil.which("git")
+            setup.git(["-c", "init.templateDir=", "clone", "--local", "--no-hardlinks", "--", ROOT, lab], git_path=git_path)
+            workspace = root / "workspace"
+            setup.prepare_workspace(lab, KIT, workspace)
+            report = workspace / "reports/watchlist.md"
+            first = report.read_bytes()
+            self.assertIn("Skylit watchlist · GEX / VEX / recent flow".encode(), first)
+            self.assertIn(b"Fictional data only", first)
+            self.assertIn(b"QQQ", first)
+            self.assertIn(b"missing", first)
+            self.assertIn(b"0 requests attempted", first)
+            if os.name != "nt":
+                self.assertEqual(report.stat().st_mode & 0o777, 0o600)
+            launcher = workspace / "run_watchlist.py"
+            def run(*args):
+                return subprocess.run(
+                    [sys.executable, "-X", "utf8=0", str(launcher), *map(str, args)], cwd=root,
+                    env={"PATH": os.defpath, "LC_ALL": "C", "SKYLIT_API_KEY": "synthetic-unused-key"},
+                    stdin=subprocess.DEVNULL, capture_output=True, encoding="utf-8",
+                )
+            collision = run()
+            self.assertEqual(collision.returncode, 1)
+            self.assertIn("already exists", collision.stderr)
+            self.assertEqual(report.read_bytes(), first)
+            second = root / "second café.md"
+            rerun = run("--symbols", "QQQ", "--output", second)
+            self.assertEqual(rerun.returncode, 0, rerun.stderr)
+            self.assertIn(b"QQQ", second.read_bytes())
+            self.assertNotIn(b"## SPY", second.read_bytes())
+            invalid = run("--symbols", "?", "--output", root / "invalid.md")
+            self.assertNotEqual(invalid.returncode, 0)
+            self.assertFalse((root / "invalid.md").exists())
+            link = root / "link.md"
+            link.symlink_to(report)
+            blocked = run("--output", link)
+            self.assertNotEqual(blocked.returncode, 0)
+            self.assertEqual(report.read_bytes(), first)

@@ -43,6 +43,10 @@ For a fictional GEX, VEX and flow report, try
 shows how to obtain a separate pinned Kit checkout, select symbols and save a
 local report while keeping missing components visible.
 
+Already have clean Lab and pinned Kit checkouts? [Prepare a local Watchlist
+workspace](docs/local-watchlist-setup.md) with one command. It copies committed
+files into a new directory and runs the fictional demo; no key or network is used.
+
 ## Contribute an experiment
 
 ```sh

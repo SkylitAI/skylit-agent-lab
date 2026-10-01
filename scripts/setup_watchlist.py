@@ -1,10 +1,14 @@
 """Prepare an offline Watchlist workspace from existing local Git checkouts."""
 
+import argparse
+import json
 import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from probe_kit_watchlist import KIT_REVISION
 
 
@@ -18,11 +22,12 @@ class SetupError(ValueError):
 def local_environment():
     """Do not pass service keys or user Git configuration to child processes."""
     return {
-        "PATH": os.defpath,
+        "PATH": os.environ.get("PATH", os.defpath),
         "GIT_CONFIG_NOSYSTEM": "1",
         "GIT_CONFIG_GLOBAL": os.devnull,
         "GIT_TERMINAL_PROMPT": "0",
         "GIT_OPTIONAL_LOCKS": "0",
+        "GIT_ALLOW_PROTOCOL": "file",
     }
 
 
@@ -77,3 +82,91 @@ def validate_sources(lab, kit, destination):
     if any(destination.is_relative_to(source) for source in (lab, kit)):
         raise SetupError("Destination must be outside both source checkouts.")
     return lab, kit, destination, lab_revision, git_path
+
+
+LAUNCHER = '''"""Run this workspace's existing synthetic Watchlist; no service or model calls."""
+import os
+from pathlib import Path
+import subprocess
+import sys
+
+root = Path(__file__).resolve().parent
+if sys.version_info < (3, 11):
+    sys.exit("error: Python 3.11 or newer is required.")
+if (root / ".setup-incomplete").exists():
+    sys.exit("error: Setup did not finish; prepare a new workspace.")
+env = {"PATH": os.environ.get("PATH", os.defpath), "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": os.devnull,
+       "GIT_TERMINAL_PROMPT": "0", "GIT_OPTIONAL_LOCKS": "0", "GIT_ALLOW_PROTOCOL": "file"}
+command = [sys.executable, "-X", "utf8", "-I", "-B",
+           str(root / "lab/experiments/watchlist-investigator/run.py"),
+           "--output", str(root / "reports/watchlist.md"), *sys.argv[1:],
+           "--kit", str(root / "kit")]
+sys.exit(subprocess.call(command, env=env, stdin=subprocess.DEVNULL))
+'''
+
+
+def prepare_workspace(lab, kit, destination):
+    lab, kit, destination, revision, git_path = validate_sources(lab, kit, destination)
+    message = f"Prepared local workspace: {destination}\nSaved synthetic report: {destination / 'reports/watchlist.md'}"
+    try:
+        message.encode(sys.stdout.encoding or "utf-8")
+    except UnicodeError:
+        raise SetupError("Destination cannot be displayed; rerun Python with -X utf8 or choose an ASCII path.") from None
+    try:
+        destination.mkdir(mode=0o700)
+    except FileExistsError:
+        raise SetupError("Destination already exists; choose a new directory.") from None
+    except OSError:
+        raise SetupError("Cannot create destination; check its parent directory and permissions.") from None
+    marker = destination / ".setup-incomplete"
+    try:
+        marker.write_text("Setup incomplete. Preserve any files and choose a new destination.\n", encoding="utf-8")
+        for name, source, pin in (("lab", lab, revision), ("kit", kit, KIT_REVISION)):
+            target = destination / name
+            git(["-c", "init.templateDir=", "clone", "--local", "--no-hardlinks", "--no-checkout",
+                 "--", source, target], git_path=git_path)
+            git(["-C", target, "checkout", "--detach", pin], git_path=git_path)
+            if checkout_revision(target, name.title(), git_path=git_path) != pin:
+                raise SetupError("Copied checkout did not match the selected revision.")
+        result = subprocess.run(
+            [sys.executable, "-X", "utf8", "-I", "-B",
+             str(destination / "lab/experiments/watchlist-investigator/run.py"),
+             "--kit", str(destination / "kit"), "--output", str(destination / "reports/watchlist.md")],
+            env=local_environment(), stdin=subprocess.DEVNULL,
+            capture_output=True, encoding="utf-8", errors="replace", timeout=60,
+        )
+        if result.returncode:
+            raise SetupError("Synthetic Watchlist failed; check the selected Lab/Kit compatibility and output permissions.")
+        (destination / "run_watchlist.py").write_text(LAUNCHER, encoding="utf-8")
+        (destination / "setup.json").write_text(json.dumps({
+            "lab_revision": revision, "kit_revision": KIT_REVISION,
+            "mode": "offline_synthetic", "report": "reports/watchlist.md",
+        }, indent=2) + "\n", encoding="utf-8")
+        marker.unlink()
+    except SetupError as error:
+        raise SetupError(f"{error} The private incomplete destination is retained; choose a new destination after fixing the cause.") from None
+    except (OSError, subprocess.TimeoutExpired):
+        raise SetupError("Setup did not finish. The private incomplete destination is retained; check paths and permissions, then choose a new destination.") from None
+    return message
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--kit", required=True, type=Path, help="Existing clean Kit checkout at the exact documented pin")
+    parser.add_argument("--destination", required=True, type=Path, help="New directory outside both checkouts, with an existing parent")
+    args = parser.parse_args()
+    if sys.version_info < (3, 11):
+        print("error: Python 3.11 or newer is required.", file=sys.stderr)
+        return 1
+    try:
+        message = prepare_workspace(ROOT, args.kit, args.destination)
+    except SetupError as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 1
+    print(message)
+    print("Rerun from that workspace: python3 run_watchlist.py --output reports/another.md")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

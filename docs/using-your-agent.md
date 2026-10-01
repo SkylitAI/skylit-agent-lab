@@ -46,6 +46,10 @@ a **separate Kit checkout at the exact pin** and prints the private report path.
 Keep that checkout clean. Subsequent Watchlist runs require a new output filename;
 existing reports are preserved. Setup may access GitHub; rendering uses no network.
 
+Once both clean checkouts are available, the [local setup helper](local-watchlist-setup.md)
+creates a separate workspace and renders its first fictional report in one
+command. It uses only local files and leaves the source checkouts unchanged.
+
 ## Codex or Claude Code
 
 Open Lab as the working repository in your existing agent. Confirm it can read
@@ -194,6 +198,7 @@ need repository access until a public preview and fork workflow are verified.
 | Access, credit or request cap failure | Read the sanitized error and account limits; do not auto-increase caps or retry |
 | Tests report skips | Supply the pinned Kit as described in checks.md before claiming full runtime verification |
 
-Remaining download-key-run gaps are a bundled setup path, Lab's own bounded live
-runner with run records, and authenticated service/host evidence. The examples
+The local helper does not obtain the repositories or install prerequisites.
+Remaining download-key-run gaps are a distributable setup path, Lab's own bounded
+live runner with run records, and authenticated service/host evidence. The examples
 above do not claim those deliverables are complete.
