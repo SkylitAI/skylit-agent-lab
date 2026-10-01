@@ -142,6 +142,27 @@ class FixtureInputTests(unittest.TestCase):
                 consumer.load_fixture(Path(directory) / "missing.json")
 
     @unittest.skipUnless(KIT.is_dir(), "Set SKYLIT_AGENT_KIT to the pinned local checkout")
+    def test_built_result_exposes_source_times_and_renders_without_fixture(self):
+        kit = consumer.load_kit(KIT)
+        fixture = json.loads(FIXTURE.read_text())
+        result = consumer.build_result(kit, fixture, "spy,qqq,spy")
+        self.assertEqual(result["symbols"], ["SPY", "QQQ"])
+        spy = result["rows"]["SPY"]
+        self.assertEqual(spy["gamma"]["as_of"], "2026-10-01T14:00:00+00:00")
+        self.assertEqual(spy["vanna"]["as_of"], "2026-10-01T13:59:00+00:00")
+        self.assertEqual(spy["flow"]["generated_at"], "2026-10-01T14:01:00+00:00")
+        self.assertIsNone(spy["flow"]["latest_trade"])
+        self.assertEqual(result["rows"]["QQQ"]["gamma"], {"status": "missing from heatmap response"})
+        self.assertEqual(result["rows"]["QQQ"]["flow"], {"status": "missing from synthetic fixture"})
+        original_result = json.loads(json.dumps(result))
+        fixture.clear()
+        self.assertEqual(
+            consumer.render_result(kit, result),
+            (ROOT / "examples" / "kit-watchlist.expected.md").read_text(),
+        )
+        self.assertEqual(result, original_result)
+
+    @unittest.skipUnless(KIT.is_dir(), "Set SKYLIT_AGENT_KIT to the pinned local checkout")
     def test_reused_renderer_names_the_experiment_and_keeps_fictional_label(self):
         kit = consumer.load_kit(KIT)
         report = consumer.render_fixture(

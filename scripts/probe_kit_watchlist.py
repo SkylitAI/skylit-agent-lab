@@ -51,8 +51,8 @@ def load_kit(path):
     return importlib.import_module("skylit_agent_kit.watchlist")
 
 
-def render_fixture(kit, fixture, selected, *, title="Synthetic Kit consumer probe"):
-    """Adapt local fixture envelopes to the existing Kit report input."""
+def build_result(kit, fixture, selected):
+    """Parse local fixture envelopes once into the existing Kit report input."""
     if (not isinstance(fixture, dict)
             or any(not isinstance(fixture.get(key), dict) for key in ("gamma", "vanna", "flow"))
             or any(not isinstance(value, dict) for value in fixture["flow"].values())):
@@ -69,12 +69,17 @@ def render_fixture(kit, fixture, selected, *, title="Synthetic Kit consumer prob
         }
         for symbol in symbols
     }
-    report = kit.render_report({
+    return {
         "symbols": symbols, "rows": rows,
         "retrieved_at": "2026-10-01T14:01:00+00:00 (fictional fixture time)",
         "stop": "offline synthetic fixture rendered", "date": "2026-10-01",
         "flow_limit": 10, "sources": [], "requests": 0, "credits_reserved": 0,
-    })
+    }
+
+
+def render_result(kit, result, *, title="Synthetic Kit consumer probe"):
+    """Render an already parsed Kit result with the fictional-data context."""
+    report = kit.render_report(result)
     return (
         f"# {title}\n\n"
         "**Fictional data only.** Every value and timestamp below is made up.\n"
@@ -82,6 +87,11 @@ def render_fixture(kit, fixture, selected, *, title="Synthetic Kit consumer prob
         f"Kit revision: `{KIT_REVISION}`. No credentials or model required.\n\n"
         + report
     )
+
+
+def render_fixture(kit, fixture, selected, *, title="Synthetic Kit consumer probe"):
+    """Keep the fixture-to-report interface for existing consumers."""
+    return render_result(kit, build_result(kit, fixture, selected), title=title)
 
 
 def main():
