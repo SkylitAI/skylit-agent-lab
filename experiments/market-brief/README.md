@@ -3,8 +3,8 @@
 Save a short, dated brief of Federal Reserve press releases. The default uses
 the bundled fictional feed and requires no network, account, Kit or model.
 This experimental package is maintained by `@prodij` and covers one source,
-not a complete market view. T26 run-record sidecars and host verification remain
-pending; this package writes only its Markdown brief.
+not a complete market view. It writes a Markdown brief and a private local run
+record. Host verification remains pending.
 
 Keep the package inside the full Lab checkout. From the Lab root, with Python
 3.11 or later:
@@ -13,8 +13,9 @@ Keep the package inside the full Lab checkout. From the Lab root, with Python
 python3 -X utf8 -I -B experiments/market-brief/run.py
 ```
 
-The default output is `experiments/market-brief/reports/brief.md`. Choose a new
-output path for another run; existing files are never overwritten:
+The default outputs are `experiments/market-brief/reports/brief.md` and
+`experiments/market-brief/reports/brief.md.run.json`. Choose a new output path
+for another run; existing files are never overwritten:
 
 ```sh
 python3 -X utf8 -I -B experiments/market-brief/run.py --limit 1 --output /path/to/new-brief.md
@@ -51,26 +52,34 @@ retrieval. The feed hash was
 `f216afb03d2abd0dffbfab6f2657229c6c6be55c52e1d1cb331c2acc6b3d077b`;
 the report hash was
 `659771267c0d5c8779cec2c04a91c62a15c2106652a698ebd50fb73cf246263c`.
-This dated observation does not establish continued availability or freshness.
+This dated observation predates run-record integration and does not verify that
+integration, continued availability or freshness.
 
 ## Outcomes and files
 
 | Exit | Meaning |
 |---|---|
-| 0 | Saved a valid brief, including a clearly stated zero-item feed. An empty feed does not prove there were no Board announcements. |
-| 1 | Source invalid/unavailable: saved an explicit gap brief with no usable releases. Input or output failures stop the run. If stdout fails after saving, stderr identifies the saved report. |
+| 0 | Saved a valid brief and completed run record, including a clearly stated zero-item feed. An empty feed does not prove there were no Board announcements. |
+| 1 | Source invalid/unavailable: saved a gap brief and stopped record. Local input failures save only a stopped record when possible. Output/persistence failures stop the run. If stdout fails after saving, stderr identifies both saved artifacts. |
 | 2 | Invalid command arguments or an unusable output-path presentation; no output is created and no fetch starts. |
 
 Local input must be a readable regular file of at most 512 KiB. Final input
 symlinks, directories and FIFOs are rejected before a blocking read. Reports
 are UTF-8, exclusively created with mode 0600 on POSIX, and never overwrite an
-existing file or symlink. Output path components must not be symlinks; use a
-canonical path where the OS provides directory aliases. Relative explicit paths
-use the working directory; the default fixture/output use the package location.
+existing file or symlink. The sidecar is also exclusively created at mode 0600.
+Both paths are checked before an optional fetch. Output path components must not
+be symlinks; use a canonical path where the OS provides directory aliases.
+Relative explicit paths use the working directory; the default fixture/output
+use the package location.
+The output basename must exclude colon and backslash and leave space for
+`.run.json` within 255 encoded bytes.
 These checks are not a filesystem sandbox against concurrent path replacement.
-An output write or close failure can leave a partial report; inspect it and choose
-a new path before rerunning. An unchanged bundled fixture is required for the
-default fictional provenance label: its exact consumed bytes must match the
+The two writes are not atomic: an I/O error or interruption can leave a partial
+artifact, or a report without a usable record. A finalization error can leave an
+earlier record that says completed; check the command's exit status too. Inspect
+possible artifacts and choose a new path before rerunning.
+An unchanged bundled fixture is required for the default fictional provenance
+label: its exact consumed bytes must match the
 known SHA-256. Edited fixtures require explicit `--input` and use caller-supplied
 provenance.
 
@@ -81,6 +90,26 @@ including bidi controls, tabs and newlines, appear as visible `\uNNNN` or
 encoding does not make semantic instructions safe for a later model consumer.
 The report includes the hash of the exact accepted bytes when available, and
 an explicit source status.
+
+## Private run record
+
+The [v1 Market contract](../../docs/run-record.md#journal-and-market-profiles)
+records the observed Lab Git revision/state before output creation, actual UTC
+execution times, selected publication times, display limit and exact input/report
+byte hashes. Offline modes record no retrieval event and zero requests; explicit
+fetching records the adapter's observed retrieval and actual request count.
+Neither execution times nor publication times substitute for retrieval.
+
+The record contains no source titles, release URLs, raw errors or local input
+paths. Kit is null, model usage is none, and billing is unknown. It describes
+this Python process, not the launching host's usage. Unreadable or oversized input
+has no full input hash; a changed default fixture retains the consumed-byte hash
+and a stopped reason. Invalid/unavailable sources can have a complete hashed gap
+report while the record remains stopped and the command exits 1.
+
+Keep both files local. Default reports and all `*.run.json` files are Git-ignored;
+custom Markdown destinations may not be. These records are observations, not a
+source-authenticity, freshness or host-support certification.
 
 ## Fixture and source
 
@@ -125,6 +154,6 @@ This covers one press-release feed; it is not a complete market view or a freshn
 Run the package tests without network:
 
 ```sh
-python3.11 -X utf8 -B -m unittest discover -s tests -p 'test_market_brief_runner.py' -v
-python3.14 -X utf8 -B -m unittest discover -s tests -p 'test_market_brief_runner.py' -v
+python3.11 -X utf8 -B -m unittest discover -s tests -p 'test_market*.py' -v
+python3.14 -X utf8 -B -m unittest discover -s tests -p 'test_market*.py' -v
 ```

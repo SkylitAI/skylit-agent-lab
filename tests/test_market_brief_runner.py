@@ -65,7 +65,7 @@ class MarketBriefTests(unittest.TestCase):
             "<!-- expected-start -->\n```markdown\n", 1)[1].split("```\n<!-- expected-end -->", 1)[0]
         self.assertEqual(self.output.read_text(encoding="utf-8"), expected)
         self.assertIn(str(self.output), result.stdout)
-        self.assertFalse(Path(str(self.output) + ".run.json").exists())
+        self.assertTrue(Path(str(self.output) + ".run.json").is_file())
         if os.name == "posix":
             self.assertEqual(self.output.stat().st_mode & 0o777, 0o600)
 
@@ -73,6 +73,7 @@ class MarketBriefTests(unittest.TestCase):
         self.assertEqual(FIXTURE, (ROOT / "examples/fed-press-synthetic.xml").read_bytes())
         manifest = json.loads((PACKAGE / "experiment.json").read_text())
         self.assertEqual(manifest["inputs"], ["fixture.xml"])
+        self.assertEqual(manifest["outputs"], ["reports/brief.md", "reports/brief.md.run.json"])
         self.assertIsNone(manifest["kit"])
         self.assertEqual(manifest["tested_hosts"], [])
 
@@ -85,6 +86,7 @@ class MarketBriefTests(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertFalse(self.output.exists())
         self.assertIn("--input", stderr.getvalue())
+        Path(str(self.output) + ".run.json").unlink()
         result = self.command("--input", changed)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("Caller-supplied saved feed", self.output.read_text())
@@ -102,6 +104,7 @@ class MarketBriefTests(unittest.TestCase):
             os.close(write_fd)
         self.assertEqual(result.returncode, 1, result.stderr)
         self.assertTrue(self.output.is_file())
+        self.assertTrue(Path(str(self.output) + ".run.json").is_file())
         self.assertIn("was saved", result.stderr)
         self.assertIn(str(self.output), result.stderr)
         self.assertNotIn("Traceback", result.stderr)
@@ -115,7 +118,7 @@ class MarketBriefTests(unittest.TestCase):
             code = RUNNER.main(["--output", str(self.output)])
         self.assertEqual(code, 1)
         self.assertEqual(self.output.read_bytes(), b"partial")
-        self.assertIn("partial report may remain", stderr.getvalue())
+        self.assertIn("partial report may", stderr.getvalue())
         self.assertNotIn("private-marker", stderr.getvalue())
 
     def test_saved_input_and_limit_preserve_caller_supplied_provenance(self):
@@ -146,6 +149,7 @@ class MarketBriefTests(unittest.TestCase):
         for raw in (b"not xml: private-marker", b"\xff", FIXTURE.replace(b"<pubDate>", b"<wrong>")):
             with self.subTest(raw=raw[:20]):
                 self.output.unlink(missing_ok=True)
+                Path(str(self.output) + ".run.json").unlink(missing_ok=True)
                 result = self.command("--input", self.input_file(raw))
                 self.assertEqual(result.returncode, 1, result.stderr)
                 report = self.output.read_text()
@@ -154,9 +158,10 @@ class MarketBriefTests(unittest.TestCase):
                 self.assertNotIn("private-marker", report + result.stderr)
                 self.assertNotIn("### Published", report)
 
-    def test_missing_directory_and_oversized_input_save_nothing(self):
+    def test_missing_directory_and_oversized_input_save_no_report(self):
         for source in (self.folder / "missing.xml", self.folder, self.input_file(b"x" * (512 * 1024 + 1))):
             with self.subTest(source=source.name):
+                Path(str(self.output) + ".run.json").unlink(missing_ok=True)
                 result = self.command("--input", source)
                 self.assert_no_report(result)
 
@@ -186,6 +191,7 @@ class MarketBriefTests(unittest.TestCase):
         for alias in ("existing", "same", "hardlink", "symlink", "broken-symlink"):
             with self.subTest(alias=alias):
                 self.output.unlink(missing_ok=True)
+                Path(str(self.output) + ".run.json").unlink(missing_ok=True)
                 output = self.output
                 if alias == "existing":
                     output.write_bytes(b"keep me")
@@ -269,6 +275,7 @@ class MarketBriefTests(unittest.TestCase):
         for raw, status, expected_code in ((empty, "empty", 0), (b"not xml", "invalid", 1)):
             with self.subTest(status=status):
                 self.output.unlink(missing_ok=True)
+                Path(str(self.output) + ".run.json").unlink(missing_ok=True)
                 record = RUNNER.feed.parse_feed(raw)
                 record.update(retrieved_at="2026-10-01T22:40:00+00:00", requests_attempted=1)
                 code, count, _, _ = self.call_fetch(record)

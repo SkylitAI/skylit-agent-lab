@@ -1,6 +1,7 @@
 """Save a dated single-source press brief; offline fictional data is the default."""
 
 import argparse
+from datetime import datetime, timezone
 import hashlib
 import os
 from pathlib import Path
@@ -11,8 +12,16 @@ import sys
 PACKAGE = Path(__file__).resolve().parent
 sys.path.insert(0, str(PACKAGE.parents[1]))
 from scripts import fed_press_feed as feed
+from scripts.git_provenance import inspect_checkout
+from scripts.record_files import PersistenceError, save_run
 
 BUNDLED_SHA256 = "e2fc20b0b4aa3c7361250ba9f699355eddc28deb860b5a082bafc4a988bb0121"
+
+
+class InputError(ValueError):
+    def __init__(self, code, message):
+        self.code = code
+        super().__init__(message)
 
 
 def _limit(value):
@@ -28,26 +37,26 @@ def _limit(value):
 def _load_input(path):
     try:
         if path.is_symlink():
-            raise ValueError("Choose a regular input file, not a symlink.")
+            raise InputError("input_unreadable", "Choose a regular input file, not a symlink.")
         flags = os.O_RDONLY | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_NOFOLLOW", 0)
         descriptor = os.open(path, flags)
         try:
             if not stat.S_ISREG(os.fstat(descriptor).st_mode):
-                raise ValueError("Choose a regular input file; directories and pipes are not supported.")
+                raise InputError("input_unreadable", "Choose a regular input file; directories and pipes are not supported.")
             with os.fdopen(descriptor, "rb", closefd=False) as stream:
                 raw = stream.read(feed.MAX_BYTES + 1)
         finally:
             os.close(descriptor)
     except (OSError, UnicodeError):
-        raise ValueError("Choose a readable regular file for --input.") from None
+        raise InputError("input_unreadable", "Choose a readable regular file for --input.") from None
     if len(raw) > feed.MAX_BYTES:
-        raise ValueError("Input exceeds 512 KiB.")
+        raise InputError("input_too_large", "Input exceeds 512 KiB.")
     return raw
 
 
 def _check_output(path):
     if path.exists() or path.is_symlink():
-        raise ValueError("Output already exists; choose a new --output path.")
+        raise FileExistsError("Output already exists; choose a new --output path.")
     for parent in path.parents:
         if parent.is_symlink():
             raise ValueError("Output path components must not be symlinks; use a canonical path.")
@@ -56,14 +65,15 @@ def _check_output(path):
 
 
 def _save(path, report):
-    raw = report.encode("utf-8")
     path.parent.mkdir(parents=True, exist_ok=True)
     _check_output(path)
-    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o600)
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL
+                         | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0), 0o600)
     with os.fdopen(descriptor, "wb") as stream:
         if hasattr(os, "fchmod"):
             os.fchmod(stream.fileno(), 0o600)
-        stream.write(raw)
+        if stream.write(report) != len(report):
+            raise OSError("Incomplete report write")
 
 
 def _text(value):
@@ -101,6 +111,7 @@ def render_brief(record, mode, limit):
 
 
 def main(argv=None):
+    started = datetime.now(timezone.utc).isoformat()
     parser = argparse.ArgumentParser(description=__doc__)
     source = parser.add_mutually_exclusive_group()
     source.add_argument("--input", type=Path, help="Caller-supplied saved RSS, at most 512 KiB; retrieval is unknown")
@@ -109,35 +120,83 @@ def main(argv=None):
     parser.add_argument("--output", type=Path, default=PACKAGE / "reports" / "brief.md", help="New private Markdown file")
     args = parser.parse_args(argv)
     output = args.output.absolute()
+    sidecar = Path(str(output) + ".run.json")
     message = f"Saved brief: {output}"
-    if not str(output).isprintable() or len(output.name) > 255:
-        print("error: Choose a printable --output path with a filename of at most 255 characters.", file=sys.stderr)
+    record_message = f"Saved private run record: {sidecar}"
+    if (not str(output).isprintable() or not output.name or output.name in {".", ".."}
+            or any(char in output.name for char in "/\\:") or len(os.fsencode(sidecar.name)) > 255):
+        print("error: Choose a printable --output filename without colon or backslash, leaving room for .run.json.", file=sys.stderr)
         return 2
     try:
-        message.encode(sys.stdout.encoding or "utf-8")
+        (message + "\n" + record_message).encode(sys.stdout.encoding or "utf-8")
     except UnicodeError:
         print("error: Output path cannot be displayed; choose an ASCII path or UTF-8 stdout.", file=sys.stderr)
         return 2
     try:
         _check_output(output)
-        mode = "fetch" if args.fetch else "saved" if args.input is not None else "synthetic"
+        _check_output(sidecar)
+    except FileExistsError:
+        print("error: Output or run record already exists; choose a new --output path.", file=sys.stderr)
+        return 1
+    except (OSError, ValueError):
+        print("error: Output parent must be a usable directory with no symlink components.", file=sys.stderr)
+        return 1
+    mode = "fetch" if args.fetch else "saved" if args.input is not None else "synthetic"
+    record = {
+        "schema_version": 1, "experiment_id": "market-brief",
+        "mode": {"fetch": "public_fetch", "saved": "offline_supplied", "synthetic": "offline_synthetic"}[mode],
+        "lab": inspect_checkout(PACKAGE.parents[1]), "kit": None,
+        "inputs": [{"role": "fed_press_xml", "sha256": None, "hash_state": "not_read"}],
+        "execution": {"started_at": started, "finished_at": None},
+        "parameters": {"limit": args.limit}, "source_time": None,
+        "usage": {"scope": "python_process", "basis": "known_public_fetch" if args.fetch else "known_offline_path",
+                  "requests_attempted": 0, "credits_reserved": 0, "observed_billing": None,
+                  "model": {"mode": "none", "provider": None, "tokens": None}},
+        "outputs": [{"role": "report", "filename": None, "sha256": None, "state": "not_written"}],
+        "outcome": {"status": "stopped", "reason": "interrupted"},
+        "limits": {"input_bytes": feed.MAX_BYTES, "items": feed.MAX_ITEMS, "display_items": 20,
+                   "requests": 1 if args.fetch else 0, "fetch_timeout_seconds": feed.SECONDS if args.fetch else None,
+                   "credits": 0, "model_calls": 0, "output_no_overwrite": True},
+    }
+    report = None
+    try:
         if args.fetch:
-            record = feed.fetch_feed()
+            result = feed.fetch_feed()
+            record["usage"]["requests_attempted"] = result["requests_attempted"]
+            record["inputs"][0].update(sha256=result["sha256"],
+                                       hash_state="read_failed" if result["status"] == "unavailable" else "complete")
         else:
             raw = _load_input(args.input or PACKAGE / "fixture.xml")
-            if mode == "synthetic" and hashlib.sha256(raw).hexdigest() != BUNDLED_SHA256:
-                raise ValueError("Bundled fixture changed; use --input explicitly for caller-supplied bytes.")
-            record = feed.parse_feed(raw)
-        report = render_brief(record, mode, args.limit)
-        _save(output, report)
-    except ValueError as error:
+            digest = hashlib.sha256(raw).hexdigest()
+            record["inputs"][0].update(sha256=digest, hash_state="complete")
+            if mode == "synthetic" and digest != BUNDLED_SHA256:
+                raise InputError("fixture_changed", "Bundled fixture changed; use --input explicitly for caller-supplied bytes.")
+            result = feed.parse_feed(raw)
+        record["source_time"] = {"status": result["status"], "retrieved_at": result["retrieved_at"] if args.fetch else None,
+                                 "published_at": [item["published_at"] for item in result["items"][:args.limit]]}
+        reason = {"invalid": "invalid_feed", "unavailable": "source_unavailable"}.get(result["status"], "completed")
+        record["outcome"] = {"status": "completed" if reason == "completed" else "stopped", "reason": reason}
+        report = render_brief(result, mode, args.limit).encode("utf-8")
+        if reason != "completed":
+            print("error: Source invalid or unavailable; saving a gap brief and stopped run record.", file=sys.stderr)
+    except InputError as error:
+        if error.code != "fixture_changed":
+            record["inputs"][0]["hash_state"] = "too_large" if error.code == "input_too_large" else "read_failed"
+        record["outcome"] = {"status": "stopped", "reason": error.code}
         print(f"error: {error}", file=sys.stderr)
+    try:
+        final = save_run(output, report, record, _save, preserve_outcome=True)
+    except PersistenceError as error:
+        print(f"error: {error}", file=sys.stderr)
+        if error.code in {"output_exists", "output_write_failed"}:
+            print(record_message, file=sys.stderr)
         return 1
-    except (OSError, UnicodeError):
-        print("error: Cannot save a new private UTF-8 brief; a partial report may remain at --output.", file=sys.stderr)
+    if report is None:
+        print(record_message, file=sys.stderr)
         return 1
     try:
         print(message, flush=True)
+        print(record_message, flush=True)
     except (OSError, ValueError):
         # Prevent the interpreter's final flush from turning a handled pipe error into exit 120.
         try:
@@ -145,12 +204,9 @@ def main(argv=None):
                 os.dup2(sink.fileno(), sys.stdout.fileno())
         except (OSError, ValueError):
             pass
-        print(f"error: Brief was saved at {output}, but stdout failed; check that file before rerunning.", file=sys.stderr)
+        print(f"error: Brief was saved at {output}, with run record {sidecar}, but stdout failed; check both before rerunning.", file=sys.stderr)
         return 1
-    if record["status"] not in {"available", "empty"}:
-        print("error: Source invalid or unavailable; the saved brief records the gap.", file=sys.stderr)
-        return 1
-    return 0
+    return 0 if final["outcome"]["status"] == "completed" else 1
 
 
 if __name__ == "__main__":
