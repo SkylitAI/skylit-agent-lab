@@ -3,8 +3,8 @@
 A run record describes one Watchlist Python process and its local report. It
 does not measure the agent or LLM host that launched that process. A later host
 record may link the exact record-file hash and record its own usage separately.
-This increment implements the contract, bounded JSON decoder and strict record
-validator. No workflow currently produces these records.
+The contract, bounded JSON decoder, strict validator and local persistence helper
+are implemented. No workflow currently produces these records.
 
 The intended shared envelope is versioned, but v1 accepts only
 `watchlist-investigator` in `offline_synthetic` mode. Market Brief, Journal,
@@ -62,8 +62,55 @@ checks an already decoded object. Both validation entry points return the object
 without modifying it. The bytes entry point enforces the size/nesting limits.
 It never reads Git, other files, environment variables or network state, and
 never executes record content. Invalid data raises `RecordError` with fixed
-diagnostics that do not echo submitted content. Workflow integration, hashing
-the actual consumed input buffer and exclusive private output persistence are
-separate increments; a decoder or schema pass proves none of those behaviors.
+diagnostics that do not echo submitted content. Workflow integration and hashing
+the actual consumed input buffer are separate increments; a decoder or schema
+pass proves neither behavior.
 
 Run the contract tests without Kit: `python3 -m unittest discover -s tests -p test_run_records.py -v`.
+
+## Private local persistence helper
+
+`scripts/record_files.py` supplies `save_run(output, report, record, save_report)`.
+The caller supplies the allowlisted provenance groups, performs CLI/UTF-8/stdout
+preflight, and passes the pinned Kit's `save_private` writer. This helper does not
+discover provenance or choose a writer. It deep-copies the record and owns its
+output metadata, actual UTC finish time and persistence-failure outcome. Finish
+is captured during finalization; it is not a duration or synthetic reference.
+
+Before creating either file, it validates a prospective final record and encodes
+the report as UTF-8 with the pinned writer's native newline translation. It
+exclusively reserves `<output>.run.json` at mode `0600` before calling the report
+writer. An existing record, including a symlink or hard link, prevents report
+creation. After the report writer succeeds, the saved record may claim its full
+byte hash. An existing report is preserved with a stopped `output_exists` record;
+other write failures use `output_write_failed`, no report hash, and may leave a
+partial report. No existing report is read, hashed as this run's output, or removed.
+
+Pass `report=None` for an already-stopped computation. Its safe reason is retained,
+and only a stopped sidecar is saved. Invalid input can therefore create a record
+and its parent directory while creating no report. The returned finalized record
+is not a success claim when its outcome is stopped. Report/persistence failures
+raise `PersistenceError` with a fixed `code`; raw exception text is not recorded.
+
+Record bytes are bounded, validated UTF-8, written through the retained descriptor
+and flushed with `fsync`. A write, serialization or flush failure remains an error
+even if a complete report exists. The helper makes one best-effort stopped rewrite
+through the same descriptor; it never deletes paths or retries indefinitely.
+These two files are **not atomic**. Failure, interruption or process termination
+can leave an empty/partial record or a report without a usable record. A record
+path's existence alone does not establish completion, and no crash-durability
+guarantee is made for the pair. The caller must report the failure and possible
+artifacts rather than claiming rollback or success.
+
+If a stopped rewrite or descriptor close fails, an earlier complete JSON payload
+can remain marked `completed` even though finalization raised an error. A valid
+record alone is therefore insufficient evidence of command success: retain and
+check the command's exit status as well. An unavailable parent directory is a
+`record_unavailable` error; `record_exists` specifically identifies a collision
+at the sidecar path.
+
+Keep both artifacts in ignored local reports directories; custom destinations
+may not be ignored by Git. Nothing is uploaded. Run persistence tests with
+`python3 -m unittest discover -s tests -p test_record_files.py -v`; the real-Kit
+writer test needs the documented pinned local checkout, while the filesystem
+failure tests do not.
