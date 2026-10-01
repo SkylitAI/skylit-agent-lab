@@ -106,7 +106,12 @@ A separate format check parsed an existing temporary official response captured
 at `2026-10-01T22:11:49.036791+00:00`: HTTP 200, 14,678 bytes, 20 items, SHA-256
 `f216afb03d2abd0dffbfab6f2657229c6c6be55c52e1d1cb331c2acc6b3d077b`.
 That response is not committed, and local parsing does not invent a new retrieval
-time. The adapter's own transport is covered by mocks, not a new live request.
+time. After review and the strict publication-date fixes, the adapter's own
+`fetch_feed()` at source revision `d344779` made one unauthenticated request at
+`2026-10-01T22:35:01.186253+00:00`. It returned `available`, 20 items and the same
+exact body hash above; the first item's publication time was
+`2026-09-30T13:00:00+00:00`. No item URLs were requested, and no credential,
+paid API or model was used. This is one observed fetch, not an availability claim.
 These checks do not establish ongoing availability, freshness, completeness of
 all Board releases, host compatibility, or current Watchlist schema acceptance.
 Market Brief integration and a reviewed record extension remain separate work.
