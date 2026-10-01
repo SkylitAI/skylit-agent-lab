@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "id": "market-brief",
+  "purpose": "Save a dated Federal Reserve press-feed brief with explicit synthetic, saved-input or fetched provenance and visible source gaps.",
+  "owner": "@prodij",
+  "status": "experimental",
+  "command": ["python3", "-X", "utf8", "-I", "-B", "run.py"],
+  "inputs": ["fixture.xml"],
+  "outputs": ["reports/brief.md"],
+  "access": "Python 3.11+ and the full Lab checkout. Default and saved-input modes are offline. Explicit --fetch uses one unauthenticated request to the fixed public Board feed; no credentials, Kit or model.",
+  "cost": "Local compute by default. Explicit fetching adds ordinary network access with no paid API, model or trading calls.",
+  "tested_hosts": [],
+  "sources": [
+    {"kind": "synthetic", "reference": "fixture.xml; byte-identical to repository examples/fed-press-synthetic.xml", "license": "CC0-1.0"},
+    {"kind": "public", "reference": "https://www.federalreserve.gov/feeds/press_all.xml; terms https://www.federalreserve.gov/disclaimer.htm", "license": "Board public-domain default unless otherwise indicated; non-Board material and protected seals/logos require separate review; attribute the Board without implying endorsement."}
+  ],
+  "kit": null
+}
