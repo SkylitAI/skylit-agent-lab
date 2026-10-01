@@ -1,8 +1,10 @@
 # Render a synthetic watchlist through pinned Kit
 
-This T07 probe turns local fictional responses into a Markdown report using
-Kit's existing Python functions. It proves the consumption path for a later
-`experiments/watchlist-investigator` package. It is not that experiment yet.
+This probe turns local fictional responses into a Markdown report using Kit's
+existing Python functions. The
+[Watchlist Investigator package](../experiments/watchlist-investigator/README.md)
+uses this same parser/renderer path and Kit pin to save selected-symbol reports.
+Follow its guide for setup and the complete experiment command.
 
 Use Python 3.11+, Git, and an already available clean checkout of
 `https://github.com/SkylitAI/skylit-agent-kit` at
@@ -99,8 +101,7 @@ its SPY values are invented and QQQ is deliberately absent. SkylitAI dedicates
 renderer and its documented source/watchlist/compatibility boundaries were read
 at the pinned revision; no private source or new domain calculation was used.
 
-Next: package a selected-symbol synthetic Watchlist Investigator around this
-same Kit parser/renderer path, recording its full Kit pin in the experiment
-manifest. Explicit time-gap evidence, richer flow cases, live access and host
-verification need later work. Review and rerun this proof before changing Kit's
-revision; no Kit files changed for T07.
+Watchlist Investigator records this full Kit pin in its experiment manifest.
+Explicit time-gap evidence, live access and host verification need later work.
+Review and rerun this proof before changing Kit's revision; the consumer and
+experiment reuse Kit without changing its implementation.

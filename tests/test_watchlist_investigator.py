@@ -15,11 +15,12 @@ from test_kit_consumer import GUARD, KIT, ROOT
 PACKAGE = ROOT / "experiments" / "watchlist-investigator"
 
 
-def run_experiment(*options, script=PACKAGE / "run.py", cwd=ROOT):
+def run_experiment(*options, script=PACKAGE / "run.py", cwd=ROOT, utf8=True, ascii_stdout=False):
+    guard = ("import sys; sys.stdout.reconfigure(encoding='ascii')\n" if ascii_stdout else "") + GUARD
     return subprocess.run(
-        [sys.executable, "-I", "-B", "-c", GUARD, str(script), *map(str, options)],
-        cwd=cwd, env={"PATH": os.defpath}, stdin=subprocess.DEVNULL,
-        capture_output=True, text=True, check=False,
+        [sys.executable, "-X", "utf8" if utf8 else "utf8=0", "-I", "-B", "-c", guard, str(script), *map(str, options)],
+        cwd=cwd, env={"PATH": os.defpath, "LC_ALL": "C"}, stdin=subprocess.DEVNULL,
+        capture_output=True, text=True, encoding="utf-8", check=False,
     )
 
 
@@ -43,10 +44,47 @@ class PackageSetupTests(unittest.TestCase):
         self.assertEqual(manifest["kit"]["revision"], KIT_REVISION)
         self.assertEqual(manifest["status"], "experimental")
         self.assertEqual(manifest["tested_hosts"], [])
+        self.assertEqual(manifest["command"][:5], ["python3", "-X", "utf8", "-I", "-B"])
 
 
 @unittest.skipUnless(KIT.is_dir(), "Kit integration unverified: set SKYLIT_AGENT_KIT to the pinned checkout")
 class WatchlistInvestigatorTests(unittest.TestCase):
+    def test_ascii_locale_refuses_before_creating_output_directory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "new-reports" / "watchlist.md"
+            result = run_experiment("--kit", KIT.resolve(), "--output", output, utf8=False)
+            self.assertEqual(result.returncode, 1)
+            self.assertFalse(output.parent.exists(), "ASCII refusal must not create a file or parent directory")
+            self.assertIn("UTF-8", result.stderr)
+            self.assertIn("python3 -X utf8 -I -B", result.stderr)
+            self.assertNotIn("Traceback", result.stderr)
+            self.assertEqual(result.stdout, "")
+
+    def test_utf8_mode_under_ascii_locale_preserves_exact_bytes_and_existing_report(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "new-reports" / "watchlist.md"
+            result = run_experiment("--kit", KIT.resolve(), "--output", output)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            content = output.read_bytes()
+            self.assertIn("Skylit watchlist · GEX / VEX / recent flow".encode("utf-8"), content)
+            self.assertIn("Fictional data only", content.decode("utf-8"))
+            if os.name != "nt":
+                self.assertEqual(output.stat().st_mode & 0o777, 0o600)
+            again = run_experiment("--kit", KIT.resolve(), "--output", output)
+            self.assertEqual(again.returncode, 1)
+            self.assertIn("already exists", again.stderr)
+            self.assertEqual(output.read_bytes(), content)
+
+    def test_non_ascii_path_with_ascii_stdout_refuses_before_creating_parent(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "new-reports" / "r\u00e9sum\u00e9.md"
+            result = run_experiment("--kit", KIT.resolve(), "--output", output, ascii_stdout=True)
+            self.assertEqual(result.returncode, 1)
+            self.assertFalse(output.parent.exists(), "An unprintable saved path must be rejected before writing")
+            self.assertIn("stdout", result.stderr)
+            self.assertIn("UTF-8", result.stderr)
+            self.assertNotIn("Traceback", result.stderr)
+
     def test_default_report_is_private_and_independent_of_working_directory(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

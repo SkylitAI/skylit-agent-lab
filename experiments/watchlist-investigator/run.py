@@ -1,6 +1,8 @@
 """Save an explicitly fictional watchlist using a pinned local Agent Kit."""
 
 import argparse
+import codecs
+import locale
 from pathlib import Path
 import subprocess
 import sys
@@ -18,6 +20,9 @@ def main():
     parser.add_argument("--fixture", type=Path, default=PACKAGE / "fixture.json", help="Synthetic JSON, at most 64 KiB")
     parser.add_argument("--output", type=Path, default=PACKAGE / "reports" / "watchlist.md", help="New local Markdown file; never overwritten")
     args = parser.parse_args()
+    if codecs.lookup(locale.getpreferredencoding(False)).name != "utf-8":
+        print("error: UTF-8 text mode is required; rerun with python3 -X utf8 -I -B ... before saving a report.", file=sys.stderr)
+        return 1
     try:
         kit = load_kit(args.kit)
         from skylit_agent_kit.watchlist_cli import save_private
@@ -35,6 +40,12 @@ def main():
         print(f"error: {error}", file=sys.stderr)
         return 1
     output = args.output.absolute()
+    message = f"Saved private synthetic report: {output}"
+    try:
+        message.encode(sys.stdout.encoding or "utf-8")
+    except UnicodeError:
+        print("error: Output path cannot be displayed by stdout; choose an ASCII path or rerun with UTF-8 stdout (python3 -X utf8 -I -B ...).", file=sys.stderr)
+        return 1
     try:
         save_private(output, report)
     except FileExistsError:
@@ -43,7 +54,7 @@ def main():
     except (OSError, ValueError):
         print("error: Cannot save report; check the --output directory and permissions.", file=sys.stderr)
         return 1
-    print(f"Saved private synthetic report: {output}")
+    print(message)
     return 0
 
 

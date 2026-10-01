@@ -16,7 +16,7 @@ From the Lab root, obtain Kit in a **new directory** and run the experiment:
 ```sh
 git clone --no-checkout https://github.com/SkylitAI/skylit-agent-kit.git ../skylit-agent-kit-watchlist &&
 git -C ../skylit-agent-kit-watchlist checkout --detach 0f82039759ef4db9d5b3dbd90f52863f8074f2a6 &&
-python3 -I -B experiments/watchlist-investigator/run.py --kit ../skylit-agent-kit-watchlist
+python3 -X utf8 -I -B experiments/watchlist-investigator/run.py --kit ../skylit-agent-kit-watchlist
 ```
 
 Use a POSIX shell or PowerShell 7 for this chained command. On Windows, replace
@@ -29,7 +29,7 @@ For another run from any working directory, substitute your actual absolute
 checkout paths and choose a new output filename:
 
 ```sh
-python3 -I -B /path/to/skylit-agent-lab/experiments/watchlist-investigator/run.py --kit /path/to/skylit-agent-kit-watchlist --symbols QQQ,SPXW --output /path/to/new-watchlist-report.md
+python3 -X utf8 -I -B /path/to/skylit-agent-lab/experiments/watchlist-investigator/run.py --kit /path/to/skylit-agent-kit-watchlist --symbols QQQ,SPXW --output /path/to/new-watchlist-report.md
 ```
 
 Both commands print the saved file's absolute path. The default is this package's
@@ -39,6 +39,11 @@ another run, for example `--output /path/to/new-report.md`. Explicit relative
 `--kit`, `--fixture` and `--output` paths use your current working directory;
 default fixture/output paths always use this package's directory. Custom output
 destinations may not be ignored by Git; keep local reports out of commits.
+
+Keep `-X utf8` in the command: the pinned Kit writer uses Python's default text
+encoding. The runner rejects a non-UTF-8 default before creating any output or
+parent directory. If stdout cannot display the output path, it also stops before
+writing; use UTF-8 stdout or choose an ASCII output path.
 
 The default report contains:
 
@@ -72,16 +77,18 @@ proprietary calculation or reconstructed score is included.
 From the Lab root, run the package's behavior tests with a local Kit checkout:
 
 ```sh
-SKYLIT_AGENT_KIT=../skylit-agent-kit-watchlist python3 -m unittest discover -s tests -p test_watchlist_investigator.py -v
+SKYLIT_AGENT_KIT=../skylit-agent-kit-watchlist python3 -X utf8 -m unittest discover -s tests -p test_watchlist_investigator.py -v
 ```
 
 For PowerShell, set `$env:SKYLIT_AGENT_KIT = '../skylit-agent-kit-watchlist'`
-first, then run `py -3 -m unittest discover -s tests -p test_watchlist_investigator.py -v`.
+first, then run `py -3 -X utf8 -m unittest discover -s tests -p test_watchlist_investigator.py -v`.
 
 Tests use real Kit with socket operations and credential prompts blocked.
-Runtime revision `2fdda1c` was checked 2026-10-01 on Darwin 25.6.0 arm64 with
-Python 3.11.14 and 3.14.5: all 48 Lab tests passed, including the seven package tests.
-Without a local Kit checkout, five integration tests visibly skip; two setup
+Encoding regressions force `LC_ALL=C` and explicit `-X utf8=0` / `-X utf8`, checking
+refusal before output creation, exact UTF-8 bytes, permissions and no overwrite.
+Checked 2026-10-01 on Darwin 25.6.0 arm64 with Python 3.11.14 and 3.14.5:
+all 51 Lab tests passed, including the ten package tests.
+Without a local Kit checkout, eight integration tests visibly skip; two setup
 checks still run. That leaves runtime integration unverified. CI receives no Kit
 credentials and does not download Kit. Explicit temporal evidence and run records are later
 increments.
