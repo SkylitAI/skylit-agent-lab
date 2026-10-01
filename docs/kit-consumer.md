@@ -72,27 +72,26 @@ It performs no freshness, session-alignment or chart-context verification.
 
 ## Reproduction evidence and limits
 
-Recorded 2026-10-01 against the exact Kit SHA above: Python 3.14.5, Darwin 25.6.0
-arm64. Initial tests failed before the probe/fixture existed (four failures,
-two missing-fixture errors). After implementation, all six passed with no skips.
-The subprocesses use isolated Python, an environment containing only a standard
-`PATH`, closed stdin, blocked Python socket operations and blocked key prompts.
-They render real Kit code and check changed input, selection, gaps and errors.
-This is local offline Python evidence, not agent-host or live-service support.
-All 36 Lab tests, manifest validation and compilation passed. A fresh default
-probe output matched the captured Markdown exactly.
+Checked 2026-10-01 at Lab runtime revision `d041f300` against the Kit SHA above:
+all 60 Lab tests, including 11 consumer tests, passed on Python 3.11.14 and
+3.14.5, Darwin 25.6.0 arm64. Manifest validation and compilation also passed.
+The CLI test subprocesses use isolated Python, a minimal environment, closed
+stdin, blocked Python socket operations and blocked key prompts. They render
+real Kit code and check changed input, selection, gaps and errors. The complete
+probe output matches the captured Markdown; a disposable local Kit copy tests
+dirty-checkout rejection. This is local offline Python evidence, not agent-host
+or live-service support.
 
-T08-A adds a bounded `load_fixture(path)` helper and an optional literal report
-title for the actual experiment consumer. New tests failed before those helpers
-existed; all ten consumer tests then passed. The original report is also checked
-in full, and a disposable local Kit copy exercises dirty-checkout rejection.
+`build_result` exposes the already parsed Kit rows and timestamps;
+`render_result` renders those rows without reading the fixture again or mutating
+them. `render_fixture` retains the original fixture-to-report interface.
 
 Basic Lab checks do not require Kit. The tests look for `SKYLIT_AGENT_KIT` or a
-sibling checkout; if absent, seven real-Kit tests visibly skip while the wrong-pin
-and two fixture-loading tests still run. **A skipped run leaves Kit consumption
+sibling checkout; if absent, real-Kit tests visibly skip while the wrong-pin
+and fixture-loading checks still run. **A skipped run leaves Kit consumption
 unverified.** No CI token or download is added. The dirty-checkout test copies
 only the supplied local Kit checkout using `git clone --local --no-hardlinks`.
-Run the explicit command above with the pinned checkout and require all ten
+Run the explicit command above with the pinned checkout and require all
 consumer tests to execute when reviewing this contract.
 
 The fixture was independently authored from the Kit parser's consumed fields;
@@ -102,6 +101,7 @@ renderer and its documented source/watchlist/compatibility boundaries were read
 at the pinned revision; no private source or new domain calculation was used.
 
 Watchlist Investigator records this full Kit pin in its experiment manifest.
-Explicit time-gap evidence, live access and host verification need later work.
+It adds explicit synthetic source-time evidence using these parsed rows. Live
+access, run records and host verification need later work.
 Review and rerun this proof before changing Kit's revision; the consumer and
 experiment reuse Kit without changing its implementation.
