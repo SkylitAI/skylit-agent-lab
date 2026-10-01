@@ -47,32 +47,41 @@ def _finish(record):
     record["execution"]["finished_at"] = datetime.now(timezone.utc).isoformat()
 
 
-def save_run(output, report, record, save_report):
-    """Finalize a copied record; call the pinned Kit writer only after reservation.
+def save_run(output, report, record, save_report, *, preserve_outcome=False):
+    """Finalize a copied record; call the supplied writer after reservation.
 
     The caller supplies validated provenance and UTF-8/runtime preflight. This
     helper owns output metadata, finish time and persistence-failure outcomes.
-    A None report preserves an already-stopped computation's outcome. A returned
-    stopped record is not workflow success; report/persistence failures raise.
+    Bytes must be UTF-8 and are hashed/passed unchanged; text uses the pinned
+    Kit writer's native-newline convention. With preserve_outcome=True a saved
+    report may describe a stopped computation. A None report always requires
+    a stopped outcome. Returned stopped records are not workflow success;
+    report/persistence failures raise and override the computation's outcome.
     """
     report_hash = None
     if report is not None:
         try:
-            report_hash = hashlib.sha256(report.replace("\n", os.linesep).encode("utf-8")).hexdigest() if type(report) is str else None
+            if type(report) is bytes:
+                report.decode("utf-8")
+                report_hash = hashlib.sha256(report).hexdigest()
+            elif type(report) is str:
+                report_hash = hashlib.sha256(report.replace("\n", os.linesep).encode("utf-8")).hexdigest()
         except UnicodeError:
             pass
         if report_hash is None:
             raise PersistenceError("invalid_report")
     invalid = False
     try:
+        if type(preserve_outcome) is not bool:
+            raise RecordError("preserve_outcome must be a boolean.")
         output = Path(output)
         sidecar = Path(str(output) + ".run.json")
         final = copy.deepcopy(record)
         final["outputs"] = [{"role": "report", "filename": output.name, "sha256": report_hash,
                              "state": "complete" if report is not None else "not_written"}]
-        if report is not None:
+        if report is not None and not preserve_outcome:
             final["outcome"] = {"status": "completed", "reason": "completed"}
-        elif final["outcome"]["status"] != "stopped":
+        elif report is None and final["outcome"]["status"] != "stopped":
             raise RecordError("A missing report requires a stopped outcome.")
         _finish(final)
         _payload(final)  # Reject caller contract bugs before creating either file.

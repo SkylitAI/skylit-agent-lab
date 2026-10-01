@@ -183,21 +183,36 @@ persistence extension before runner integration.
 
 ## Private local persistence helper
 
-`scripts/record_files.py` supplies `save_run(output, report, record, save_report)`.
+`scripts/record_files.py` supplies
+`save_run(output, report, record, save_report, *, preserve_outcome=False)`.
 The caller supplies the allowlisted provenance groups, performs CLI/UTF-8/stdout
-preflight, and passes the pinned Kit's `save_private` writer. This helper does not
+preflight, and passes a matching private exclusive writer. Watchlist uses the
+pinned Kit's `save_private` text writer. This helper does not
 discover provenance or choose a writer. It deep-copies the record and owns its
 output metadata, actual UTC finish time and persistence-failure outcome. Finish
 is captured during finalization; it is not a duration or synthetic reference.
 
-Before creating either file, it validates a prospective final record and encodes
-the report as UTF-8 with the pinned writer's native newline translation. It
-exclusively reserves `<output>.run.json` at mode `0600` before calling the report
+Before creating either file, it validates a prospective final record. A `str`
+report is hashed as UTF-8 with the pinned text writer's native newline translation.
+A `bytes` report must contain valid UTF-8; those exact bytes are hashed and passed
+unchanged to the supplied binary writer, with no newline conversion. The writer
+must persist its entire argument and raise on failure; this helper does not read
+the result back. Invalid UTF-8 or other report types fail before creating parents.
+It exclusively reserves `<output>.run.json` at mode `0600` before calling the report
 writer. An existing record, including a symlink or hard link, prevents report
 creation. After the report writer succeeds, the saved record may claim its full
 byte hash. An existing report is preserved with a stopped `output_exists` record;
 other write failures use `output_write_failed`, no report hash, and may leave a
 partial report. No existing report is read, hashed as this run's output, or removed.
+
+The default preserves Watchlist behavior: a present report sets a completed
+outcome. New callers can pass the boolean `preserve_outcome=True` to retain their
+validated completed or stopped outcome when a report is present. A saved gap
+report can therefore have complete output bytes while its computation remains
+stopped; the caller must still exit nonzero. This option cannot admit an invalid
+outcome. A persistence failure takes precedence in the returned error; persisted
+JSON may retain an earlier outcome after a failed rewrite or close, as described
+below.
 
 Pass `report=None` for an already-stopped computation. Its safe reason is retained,
 and only a stopped sidecar is saved. Invalid input can therefore create a record
