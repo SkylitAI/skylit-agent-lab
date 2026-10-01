@@ -39,6 +39,26 @@ dependencies before choosing to run it in a suitable isolated environment.
 Never give untrusted PR code production secrets, private vault access or a
 self-hosted runner with privileged credentials.
 
+## Submitting from a local workspace
+
+The setup helper's workspace contains a `lab/` Git checkout. Enter it with
+`cd lab` before running contribution commands. Its `origin` points to the local
+source checkout, so pushing to `origin` does not submit a GitHub contribution.
+
+Inspect `git remote -v`. If you have repository write access and no existing
+remote named `github`, add the repository as a separate remote:
+
+```sh
+git remote add github https://github.com/SkylitAI/skylit-agent-lab.git
+git push -u github HEAD
+```
+
+Review the staged diff and commit only your intended source changes before
+pushing. Open a draft PR for that branch through GitHub. If `github` already
+exists, verify its destination instead of replacing it. Contributors without
+write access need an authorized fork or maintainer-assisted route; INTERNAL
+visibility currently limits outside access. Do not push generated reports or keys.
+
 ## Before review
 
 Run this AI slop check on the actual change, whether written by a person or AI:

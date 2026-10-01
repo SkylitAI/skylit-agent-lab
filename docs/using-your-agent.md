@@ -166,8 +166,13 @@ check data-sharing terms before sharing. This standalone mode needs no LLM key.
 
 ## Make a contribution
 
+Run the commands below from the **Lab checkout root**. From a helper-generated
+workspace root, first run `cd lab`; that workspace root is not a Git checkout.
 Use a clean checkout based on `main` and a new branch. Preserve unrelated work;
 use a separate checkout if needed. Your agent can perform these steps with you.
+The helper's copied Lab repository has a local-source `origin`; follow the
+[submission remote instructions](../CONTRIBUTING.md#submitting-from-a-local-workspace)
+before pushing.
 
 ```sh
 git switch -c experiment/my-experiment

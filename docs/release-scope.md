@@ -4,7 +4,8 @@ Lab supplies a runnable synthetic template, metadata validation, behavioral test
 and an offline [Watchlist Investigator](../experiments/watchlist-investigator/README.md).
 The experiment renders selected fictional symbols and gaps through a pinned local
 Kit checkout and saves private local reports with validated run records. It does not supply a trading agent,
-live data adapter or evaluation engine.
+evaluation engine. A separate explicit live entry point reuses pinned Kit clients;
+its verification uses mocked service responses.
 
 | Target | Status |
 |---|---|
@@ -13,14 +14,14 @@ live data adapter or evaluation engine.
 | Claude Code and OpenClaw | Planned host probes; no certified integration |
 | Muse | Provisional Muse Code CLI discovery recorded in the [host matrix](host-matrix.md); model access and Watchlist execution unverified |
 | Custom agents | Can invoke documented commands; integration example planned |
-| Live Skylit data | Reuse the maintained Kit; Lab integration and live verification pending |
+| Live Skylit data | Separate Kit-backed entry point with explicit opt-in and request/credit/time caps; mocked verification passed, authenticated service verification and live run records pending |
 | Public contribution | Repository remains INTERNAL; outside access and fork CI remain unverified |
 
 Source-time comparisons use a declared fictional reference and demonstration
 age threshold; they do not establish a synchronized market snapshot. Local run
 records identify consumed input bytes, revision observations, output hashes and
 stopped outcomes; they measure the Python workflow, not its launching model host.
-Bounded live verification and host integrations remain
+Authenticated live verification and host integrations remain
 planned. Later work includes Market
 Brief, Journal Reviewer, evaluation cases and independent reproductions.
 

@@ -127,6 +127,15 @@ class PinnedLiveTransportTests(unittest.TestCase):
             if os.name != "nt":
                 self.assertEqual((Path(directory) / "reports/live-watchlist.md").stat().st_mode & 0o777, 0o600)
 
+    def test_surrogate_source_notice_preserves_completed_report(self):
+        payloads = self.payloads()
+        payloads[2]["meta"]["attribution"] = "\ud800"
+        with tempfile.TemporaryDirectory() as directory:
+            code, output, report, calls = self.run_mocked(directory, payloads)
+        self.assertEqual((code, calls), (0, 5), output)
+        self.assertIn("\\ud800", report)
+        self.assertIn("Data: [Skylit]", report)
+
     def test_missing_key_never_opens_transport(self):
         with tempfile.TemporaryDirectory() as directory:
             code, output, report, calls = self.run_mocked(directory, [], key="")

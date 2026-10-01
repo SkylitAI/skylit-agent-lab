@@ -81,7 +81,9 @@ def main(argv=None):
         notices = [{"source": item["url"], "meta": item["response"].get("meta")}
                    for item in result["raw"] if item["response"].get("meta") is not None]
         if notices:
-            report += "\n## Source metadata and notices\n\n<pre>" + html.escape(json.dumps(notices, ensure_ascii=False, indent=2)) + "</pre>\n"
+            report += "\n## Source metadata and notices\n\n<pre>" + html.escape(json.dumps(notices, ensure_ascii=True, indent=2)) + "</pre>\n"
+        # Reject invalid Unicode before the exclusive writer creates a file.
+        report.encode("utf-8")
         cli.save_private(destination, report)
         print(f"Saved private live-path report: {destination}")
         print("This path has mocked verification only; account billing and authenticated service behavior remain unverified.")

@@ -70,7 +70,7 @@ output filename. The default output stays inside the workspace; explicit relativ
 Use the existing [runner options](../experiments/watchlist-investigator/README.md)
 to select symbols, a synthetic fixture or a fictional reference time. Keep Kit
 at its clean exact pin. A modified Lab copy can be used for local experimentation;
-the launcher does not certify those edits. Follow the
+the launcher does not certify those edits. Run `cd lab` from the workspace root, then follow the
 [contribution walkthrough](using-your-agent.md#make-a-contribution) to prepare a
 reviewable change through your existing agent or a terminal.
 
