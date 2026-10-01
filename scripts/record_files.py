@@ -84,6 +84,11 @@ def save_run(output, report, record, save_report):
     failure = None
     try:
         sidecar.parent.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        failure = "record_unavailable"
+    if failure:
+        raise PersistenceError(failure)
+    try:
         descriptor = os.open(sidecar, os.O_WRONLY | os.O_CREAT | os.O_EXCL
                              | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0), 0o600)
     except FileExistsError:

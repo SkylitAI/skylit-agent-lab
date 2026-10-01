@@ -102,6 +102,13 @@ path's existence alone does not establish completion, and no crash-durability
 guarantee is made for the pair. The caller must report the failure and possible
 artifacts rather than claiming rollback or success.
 
+If a stopped rewrite or descriptor close fails, an earlier complete JSON payload
+can remain marked `completed` even though finalization raised an error. A valid
+record alone is therefore insufficient evidence of command success: retain and
+check the command's exit status as well. An unavailable parent directory is a
+`record_unavailable` error; `record_exists` specifically identifies a collision
+at the sidecar path.
+
 Keep both artifacts in ignored local reports directories; custom destinations
 may not be ignored by Git. Nothing is uploaded. Run persistence tests with
 `python3 -m unittest discover -s tests -p test_record_files.py -v`; the real-Kit
