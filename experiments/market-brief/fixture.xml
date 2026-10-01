@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Independently authored synthetic fixture, CC0-1.0. All titles, dates and
+     release paths are fictional. No Board release text or logo is reproduced.
+     Format source: https://www.federalreserve.gov/feeds/press_all.xml -->
+<rss version="2.0">
+  <channel>
+    <title>Fictional adapter test feed</title>
+    <link>https://www.federalreserve.gov/feeds/feeds.htm</link>
+    <description>Fictional data for offline parser tests only.</description>
+    <item>
+      <title>Fictional notice: paper kites &amp; sample calendars</title>
+      <link>https://www.federalreserve.gov/newsevents/pressreleases/fictional20200101a.htm</link>
+      <guid>https://www.federalreserve.gov/newsevents/pressreleases/fictional20200101a.htm</guid>
+      <description><![CDATA[<b>Fictional description excluded from output.</b>]]></description>
+      <category>Fictional category</category>
+      <pubDate>Wed, 01 Jan 2020 12:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Fictional notice: an imaginary meeting room</title>
+      <link>https://www.federalreserve.gov/newsevents/pressreleases/fictional20200102a.htm</link>
+      <pubDate>Thu, 02 Jan 2020 09:30:00 -0500</pubDate>
+    </item>
+  </channel>
+</rss>
