@@ -1,0 +1,48 @@
+{
+  "gamma": {
+    "data": {
+      "symbols": [
+        {
+          "symbol": "SPY",
+          "asOf": "2026-10-01T14:00:00Z",
+          "spot": 101,
+          "expirations": ["2026-10-02"],
+          "strikes": [
+            {"strike": 100, "value": -250, "nodeType": "king"},
+            {"strike": 105, "value": 75, "nodeType": "normal"}
+          ]
+        }
+      ]
+    },
+    "meta": {"metric": "gamma"}
+  },
+  "vanna": {
+    "data": {
+      "symbols": [
+        {
+          "symbol": "SPY",
+          "asOf": "2026-10-01T13:59:00Z",
+          "spot": 101,
+          "expirations": ["2026-10-02"],
+          "strikes": [
+            {"strike": 105, "value": 40, "nodeType": "normal"}
+          ]
+        }
+      ]
+    },
+    "meta": {"metric": "vanna"}
+  },
+  "flow": {
+    "SPY": {
+      "data": {
+        "ticker": "SPY",
+        "timeframe": "1d",
+        "trades": [],
+        "tradeCount": 0,
+        "sweepCount": 0,
+        "totalPremium": 0
+      },
+      "meta": {"timestamp": "2026-10-01T14:01:00Z"}
+    }
+  }
+}
