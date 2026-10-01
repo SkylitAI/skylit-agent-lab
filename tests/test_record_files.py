@@ -129,6 +129,19 @@ class PersistenceTests(unittest.TestCase):
         self.assertFalse(self.output.exists())
         self.assertFalse(self.sidecar.exists())
 
+    def test_parent_file_is_unavailable_rather_than_an_existing_sidecar(self):
+        self.output.parent.write_text("Keep this file.\n")
+        self.assert_failure("record_unavailable", mock.Mock(side_effect=AssertionError("Writer ran")))
+        self.assertEqual(self.output.parent.read_text(), "Keep this file.\n")
+        self.assertFalse(self.sidecar.exists())
+
+    def test_failed_stopped_rewrite_still_raises_when_complete_json_remains(self):
+        with mock.patch.object(record_files.os, "fsync", side_effect=OSError("private failure detail")), \
+             mock.patch.object(record_files.os, "lseek", side_effect=OSError("private failure detail")):
+            self.assert_failure("record_write_failed")
+        self.assertEqual(self.saved_record()["outcome"]["status"], "completed")
+        self.assertTrue(self.output.exists())
+
     def test_existing_file_symlink_and_hardlink_reports_are_untouched(self):
         self.output.parent.mkdir()
         original = self.root / "original.md"
