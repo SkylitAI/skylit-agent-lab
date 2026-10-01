@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "id": "watchlist-investigator",
+  "purpose": "Render selected fictional watchlist symbols through Agent Kit while preserving unavailable components as gaps.",
+  "owner": "@prodij",
+  "status": "experimental",
+  "command": ["python3", "-I", "-B", "run.py", "--kit", "../../../skylit-agent-kit"],
+  "inputs": ["fixture.json"],
+  "outputs": ["reports/watchlist.md"],
+  "access": "Python 3.11+, Git, the full Lab checkout and an explicitly supplied clean local Kit checkout at the pinned revision. No account, key, model or runtime network. Obtaining an INTERNAL Kit repository requires separate repository access.",
+  "cost": "Zero API credits or model usage; local compute only.",
+  "tested_hosts": [],
+  "sources": [
+    {"kind": "synthetic", "reference": "fixture.json", "license": "CC0-1.0"}
+  ],
+  "kit": {
+    "repository": "https://github.com/SkylitAI/skylit-agent-kit",
+    "revision": "0f82039759ef4db9d5b3dbd90f52863f8074f2a6"
+  }
+}

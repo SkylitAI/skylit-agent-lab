@@ -1,0 +1,49 @@
+{
+  "gamma": {
+    "data": {
+      "symbols": [{
+        "symbol": "SPY",
+        "asOf": "2026-10-01T13:55:00Z",
+        "spot": 109,
+        "expirations": ["2026-10-02"],
+        "strikes": [
+          {"strike": 110, "value": -180, "nodeType": "king"},
+          {"strike": 115, "value": 45, "nodeType": "normal"}
+        ]
+      }]
+    },
+    "meta": {"metric": "gamma"}
+  },
+  "vanna": {
+    "data": {
+      "symbols": [{
+        "symbol": "SPY",
+        "asOf": "2026-10-01T13:54:00Z",
+        "spot": 109,
+        "expirations": ["2026-10-02"],
+        "strikes": [{"strike": 115, "value": 60, "nodeType": "normal"}]
+      }]
+    },
+    "meta": {"metric": "vanna"}
+  },
+  "flow": {
+    "SPY": {
+      "data": {
+        "ticker": "SPY",
+        "timeframe": "1d",
+        "trades": [{
+          "timestamp": "2026-10-01T13:55:30Z",
+          "optionType": "CALL",
+          "strike": 110,
+          "expiration": "2026-10-02",
+          "contracts": 2,
+          "premium": 650
+        }],
+        "tradeCount": 1,
+        "sweepCount": 0,
+        "totalPremium": 650
+      },
+      "meta": {"timestamp": "2026-10-01T13:56:00Z"}
+    }
+  }
+}
