@@ -47,7 +47,9 @@ def _load_input(path):
                 raw = stream.read(feed.MAX_BYTES + 1)
         finally:
             os.close(descriptor)
-    except (OSError, UnicodeError):
+    except InputError:
+        raise
+    except (OSError, ValueError):
         raise InputError("input_unreadable", "Choose a readable regular file for --input.") from None
     if len(raw) > feed.MAX_BYTES:
         raise InputError("input_too_large", "Input exceeds 512 KiB.")

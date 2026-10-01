@@ -144,6 +144,19 @@ class MarketRecordTests(unittest.TestCase):
         self.assertEqual(code, 0, stderr)
         self.assertEqual(self.read_record()["inputs"][0]["sha256"], hashlib.sha256(FIXTURE).hexdigest())
 
+    def test_invalid_os_input_path_saves_safe_unreadable_record(self):
+        code, stdout, stderr = self.invoke("--input", "PRIVATE-PATH\x00marker")
+        self.assertEqual(code, 1, stderr)
+        self.assertEqual(stdout, "")
+        self.assertFalse(self.output.exists())
+        record = self.read_record()
+        self.assertEqual(record["outcome"], {"status": "stopped", "reason": "input_unreadable"})
+        self.assertEqual(record["inputs"], [{"role": "fed_press_xml", "hash_state": "read_failed", "sha256": None}])
+        self.assertIsNone(record["source_time"])
+        self.assertIn("Choose a readable regular file for --input.", stderr)
+        for value in ("PRIVATE-PATH", "marker", "embedded null", "Traceback"):
+            self.assertNotIn(value, stderr + sidecar(self.output).read_text())
+
     def test_invalid_cli_and_output_names_create_neither_artifact_nor_request(self):
         for name, args in (("brief.md", ("--limit", "0")), ("bad:name.md", ("--fetch",)),
                            ("bad\\name.md", ("--fetch",)), ("a" * 247, ("--fetch",))):
