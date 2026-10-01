@@ -27,9 +27,13 @@ notes and labels missing information. Change a note in
 ## Contribute an experiment
 
 ```sh
-mkdir -p experiments
-cp -R templates/experiment experiments/my-experiment
+python3 -c "import shutil; shutil.copytree('templates/experiment', 'experiments/my-experiment', ignore=shutil.ignore_patterns('reports', '__pycache__', '*.pyc'))"
 ```
+
+Run this from the repository root (replace `python3` with `py -3` in Windows
+PowerShell). It excludes generated reports and
+bytecode. Choose a new directory name if `my-experiment` already exists; the copy
+does not overwrite an existing experiment.
 
 Set the copied `experiment.json` ID to `my-experiment`, use your GitHub handle as
 owner, and describe your purpose, commands, inputs, costs and sources. Replace
@@ -51,6 +55,7 @@ It does not certify its safety, sources, performance or agent compatibility.
 |---|---|
 | Understand the package fields | [Manifest contract](docs/manifest.md) |
 | Run or adapt the template | [Template guide](templates/experiment/README.md) |
+| Test local watchlist rendering through a pinned Kit checkout | [Kit consumer probe](docs/kit-consumer.md) |
 | Understand current scope and next work | [Release scope](docs/release-scope.md) |
 | Find the maintainer | [Ownership](docs/maintainers.md) |
 | Reproduce the checks | [Checks](docs/checks.md) |

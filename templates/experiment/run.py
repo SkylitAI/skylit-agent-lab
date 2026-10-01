@@ -36,6 +36,9 @@ def main():
     parser.add_argument("--output", type=Path, default=folder / "reports/example.md")
     args = parser.parse_args()
     try:
+        if (args.output.resolve() == args.fixture.resolve()
+                or (args.output.exists() and args.output.samefile(args.fixture))):
+            raise ValueError("--output must differ from --fixture; choose a report path such as reports/example.md")
         with args.fixture.open("rb") as source:
             contents = source.read(65537)
         if len(contents) > 65536:

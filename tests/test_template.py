@@ -1,6 +1,7 @@
 """The copyable example must produce real, clearly fictional output."""
 
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -67,6 +68,31 @@ class TemplateTests(unittest.TestCase):
         result, output = self.run_example(json.dumps(fixture).encode(), "Previous report.\n")
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(output.read_text(), "Previous report.\n")
+
+    def test_output_cannot_replace_fixture_through_same_path_or_alias(self):
+        for alias in ("same", "symlink", "hardlink"):
+            with self.subTest(alias=alias), tempfile.TemporaryDirectory() as directory:
+                folder = Path(directory)
+                fixture = folder / "fixture.json"
+                original = (TEMPLATE / "fixture.json").read_bytes()
+                fixture.write_bytes(original)
+                output = folder / "report.md"
+                if alias == "same":
+                    output = fixture
+                elif alias == "symlink":
+                    output.symlink_to(fixture)
+                else:
+                    os.link(fixture, output)
+                result = subprocess.run(
+                    [sys.executable, str(TEMPLATE / "run.py"),
+                     "--fixture", str(fixture), "--output", str(output)],
+                    capture_output=True, text=True, check=False,
+                )
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertEqual(result.stdout, "")
+                self.assertIn("--output must differ from --fixture", result.stderr)
+                self.assertNotIn("Traceback", result.stderr)
+                self.assertEqual(fixture.read_bytes(), original)
 
     def test_observation_text_is_not_active_markdown(self):
         fixture = {"observations": [{"symbol": "DEMO", "note": "![image](https://example.com) <b>"}]}
