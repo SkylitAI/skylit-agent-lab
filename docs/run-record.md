@@ -19,13 +19,13 @@ hex: 40 characters for Git revisions, 64 for exact-byte SHA-256 digests.
 | Root | `schema_version` (integer `1`), `experiment_id`, `mode`, and every group below. |
 | `lab` | `revision` (SHA or null), `state` (`clean`, `dirty`, `unknown`). A null revision requires unknown state. Dirty records do not claim equivalence to committed bytes. |
 | `kit` | `required_revision` (SHA), `observed_revision` (SHA or null), `verification` (`verified`, `revision_mismatch`, `dirty`, `not_checked`, `read_failed`). Verified means the observed pin matches and the checkout passed its cleanliness check. |
-| `inputs` | One object: `role: synthetic_fixture`, `sha256` (digest or null), `hash_state` (`complete`, `too_large`, `read_failed`, `not_read`). Only complete has a digest; other states explain its absence. No input path is recorded. |
+| `inputs` | A one-element array containing an object with `role: synthetic_fixture`, `sha256` (digest or null), `hash_state` (`complete`, `too_large`, `read_failed`, `not_read`). Only complete has a digest; other states explain its absence. No input path is recorded. |
 | `execution` | `started_at` and `finished_at`: actual aware UTC timestamps; finish may be null when unavailable. Wall-clock adjustment can make finish earlier; do not infer duration or change the workflow outcome from these values. |
 | `parameters` | Null before validation; otherwise exactly `symbols` (1–100 unique normalized Kit tickers), `reference_time` (aware UTC fictional reference), `max_age_seconds` (integer 0–86400). |
 | `source_time` | Null before parsing/assessment; otherwise the existing [source-time assessment](../scripts/watchlist_time.py), with its exact shape below. This is distinct from execution time. |
 | `usage` | `scope: python_process`, `basis` (`known_offline_path`, `unknown`), `requests_attempted`, `credits_reserved`, `observed_billing`, `model`. Known offline paths use integer zero requests/reservations; unknown uses null. Billing is always null: reservation is not billing. |
 | `usage.model` | Exactly `mode: none`, `provider: null`, `tokens: null`. No model/provider support is implied. |
-| `outputs` | One object: `role: report`, `filename` (record-relative basename or null before validation), `sha256` (digest or null), `state` (`complete`, `not_written`, `write_failed`, `partial`). Only complete has the full report hash. Other states explain the unknown hash; failed/partial writes never claim completeness. |
+| `outputs` | A one-element array containing an object with `role: report`, `filename` (record-relative basename or null before validation), `sha256` (digest or null), `state` (`complete`, `not_written`, `write_failed`, `partial`). Only complete has the full report hash. Other states explain the unknown hash; failed/partial writes never claim completeness. |
 | `outcome` | `status` (`completed`, `stopped`) and a fixed safe `reason` code below. No exception text. |
 | `limits` | Actual offline limits: `fixture_bytes: 65536`, `symbols: 100`, `requests: 0`, `credits: 0`, `model_calls: 0`, `output_no_overwrite: true`. These describe the workflow's enforced path, not OS isolation. |
 
