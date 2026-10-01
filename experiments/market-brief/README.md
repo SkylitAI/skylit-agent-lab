@@ -41,8 +41,17 @@ retries, item-page requests or model calls. It reuses the unchanged
 [experimental adapter](../../scripts/fed_press_feed.py) and its 512 KiB/100-item
 caps, socket timeout and elapsed checks. The 10-second budget is not a hard DNS
 or process deadline. Only this path can report an observed actual retrieval time
-and clickable Board release links. Package fetching is tested with mocks here;
-an actual package fetch is a separate review step.
+and clickable Board release links.
+
+A real package run at revision `b4b195656f7d4ac714861ce4b30fb61862a0c909`
+on 2026-10-01 retrieved the feed at `23:02:29.664553+00:00` in one request.
+With `--limit 3`, it saved three of 20 releases, exited 0 and created a `0600`
+report. The first publication time was `2026-09-30T13:00:00+00:00`, distinct from
+retrieval. The feed hash was
+`f216afb03d2abd0dffbfab6f2657229c6c6be55c52e1d1cb331c2acc6b3d077b`;
+the report hash was
+`659771267c0d5c8779cec2c04a91c62a15c2106652a698ebd50fb73cf246263c`.
+This dated observation does not establish continued availability or freshness.
 
 ## Outcomes and files
 
