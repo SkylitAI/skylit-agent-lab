@@ -11,6 +11,13 @@ import subprocess
 import sys
 
 
+if __package__:
+    from .git_provenance import inspect_checkout
+else:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from git_provenance import inspect_checkout
+
+
 KIT_REVISION = "0f82039759ef4db9d5b3dbd90f52863f8074f2a6"
 FIXTURE = Path(__file__).resolve().parents[1] / "examples" / "kit-watchlist.json"
 
@@ -61,25 +68,53 @@ def load_fixture(path):
     return load_fixture_with_hash(path)[0]
 
 
-def load_kit(path):
-    """Check the local revision before importing; never install or fetch anything."""
-    root = Path(path).resolve()
-    revision = subprocess.run(
-        ["git", "-C", str(root), "rev-parse", "HEAD"],
-        check=True, capture_output=True, text=True,
-    ).stdout.strip()
+class KitError(ValueError):
+    """A fixed failure code and qualified revision evidence, without raw errors."""
+
+    def __init__(self, code, observed_revision=None):
+        message, verification = {
+            "kit_unavailable": ("Cannot load --kit; provide a readable pinned Kit repository root and ensure Git is available.", "read_failed"),
+            "kit_mismatch": (f"Kit revision must be {KIT_REVISION}; found {observed_revision}.", "revision_mismatch"),
+            "kit_dirty": ("Kit checkout must be clean; review local changes before running.", "dirty"),
+        }[code]
+        self.code = code
+        self.metadata = {"required_revision": KIT_REVISION, "observed_revision": observed_revision,
+                         "verification": verification}
+        super().__init__(message)
+
+
+def load_kit_with_metadata(path):
+    """Verify the requested checkout and imported module; never install or fetch."""
+    checkout = inspect_checkout(path)
+    revision = checkout["revision"]
+    if revision is None:
+        raise KitError("kit_unavailable")
     if revision != KIT_REVISION:
-        raise ValueError(f"Kit revision must be {KIT_REVISION}; found {revision}.")
-    changes = subprocess.run(
-        ["git", "-C", str(root), "status", "--porcelain", "--untracked-files=all"],
-        check=True, capture_output=True, text=True,
-    ).stdout
-    if changes:
-        raise ValueError("Kit checkout must be clean; review local changes before running.")
-    if not (root / "skylit_agent_kit" / "watchlist.py").is_file():
-        raise ValueError("--kit must name the Kit repository root.")
-    sys.path.insert(0, str(root))
-    return importlib.import_module("skylit_agent_kit.watchlist")
+        raise KitError("kit_mismatch", revision)
+    if checkout["state"] == "dirty":
+        raise KitError("kit_dirty", revision)
+    if checkout["state"] != "clean":
+        raise KitError("kit_unavailable", revision)
+    module = None
+    try:
+        root = Path(path).resolve()
+        expected = root / "skylit_agent_kit" / "watchlist.py"
+        if expected.is_file():
+            sys.path.insert(0, str(root))
+            module = importlib.import_module("skylit_agent_kit.watchlist")
+            if Path(module.__file__).resolve() != expected:
+                module = None
+    except Exception:
+        # Do not retain an import exception containing private paths or details.
+        module = None
+    if module is None:
+        raise KitError("kit_unavailable", revision)
+    return module, {"required_revision": KIT_REVISION, "observed_revision": revision, "verification": "verified"}
+
+
+def load_kit(path):
+    """Keep the existing module-only interface for the probe and experiment."""
+    return load_kit_with_metadata(path)[0]
 
 
 def build_result(kit, fixture, selected):

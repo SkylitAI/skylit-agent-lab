@@ -46,6 +46,10 @@ class KitConsumerTests(unittest.TestCase):
         self.assertEqual(result.stdout, "")
         self.assertIn("Kit revision must be 0f82039759ef4db9d5b3dbd90f52863f8074f2a6", result.stderr)
         self.assertNotIn("Traceback", result.stderr)
+        with self.assertRaises(consumer.KitError) as caught:
+            consumer.load_kit_with_metadata(ROOT)
+        self.assertEqual(caught.exception.code, "kit_mismatch")
+        self.assertEqual(caught.exception.metadata["verification"], "revision_mismatch")
 
     @unittest.skipUnless(KIT.is_dir(), "Set SKYLIT_AGENT_KIT to the pinned local checkout")
     def test_real_kit_renders_synthetic_values_and_gaps_offline(self):
@@ -120,9 +124,59 @@ class KitConsumerTests(unittest.TestCase):
             )
             (checkout / "README.md").write_text("A local change.\n")
             result = self.run_probe(kit=checkout)
+            with self.assertRaises(consumer.KitError) as caught:
+                consumer.load_kit_with_metadata(checkout)
+            self.assertEqual(caught.exception.code, "kit_dirty")
+            self.assertEqual(caught.exception.metadata, {"required_revision": consumer.KIT_REVISION,
+                             "observed_revision": consumer.KIT_REVISION, "verification": "dirty"})
         self.assertEqual(result.returncode, 1)
         self.assertEqual(result.stdout, "")
         self.assertIn("Kit checkout must be clean", result.stderr)
+
+
+class KitMetadataTests(unittest.TestCase):
+    def test_unknown_status_or_missing_package_preserves_head_without_importing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            for state in ("unknown", "clean"):
+                with mock.patch.object(consumer, "inspect_checkout", return_value={"revision": consumer.KIT_REVISION, "state": state}), \
+                        mock.patch.object(consumer.importlib, "import_module") as importer:
+                    with self.assertRaises(consumer.KitError) as caught:
+                        consumer.load_kit_with_metadata(directory)
+                importer.assert_not_called()
+                self.assertEqual(caught.exception.code, "kit_unavailable")
+                self.assertEqual(caught.exception.metadata["observed_revision"], consumer.KIT_REVISION)
+                self.assertEqual(caught.exception.metadata["verification"], "read_failed")
+
+    def test_missing_kit_exposes_only_safe_failure_metadata(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaises(consumer.KitError) as caught:
+                consumer.load_kit_with_metadata(Path(directory) / "missing")
+        self.assertEqual(caught.exception.code, "kit_unavailable")
+        self.assertEqual(caught.exception.metadata, {"required_revision": consumer.KIT_REVISION,
+                         "observed_revision": None, "verification": "read_failed"})
+        self.assertNotIn(directory, str(caught.exception))
+        self.assertIsNone(caught.exception.__context__)
+
+    @unittest.skipUnless(KIT.is_dir(), "Set SKYLIT_AGENT_KIT to the pinned local checkout")
+    def test_pinned_kit_returns_verified_metadata_and_keeps_wrapper(self):
+        kit, metadata = consumer.load_kit_with_metadata(KIT)
+        self.assertIs(consumer.load_kit(KIT), kit)
+        self.assertEqual(Path(kit.__file__).resolve(), KIT.resolve() / "skylit_agent_kit" / "watchlist.py")
+        self.assertEqual(metadata, {"required_revision": consumer.KIT_REVISION,
+                         "observed_revision": consumer.KIT_REVISION, "verification": "verified"})
+
+    @unittest.skipUnless(KIT.is_dir(), "Set SKYLIT_AGENT_KIT to the pinned local checkout")
+    def test_failed_or_foreign_import_is_never_verified(self):
+        for fake in (ImportError("private import detail"), mock.Mock(__file__=str(ROOT / "foreign.py"))):
+            patch = {"side_effect": fake} if isinstance(fake, Exception) else {"return_value": fake}
+            with mock.patch.object(consumer.importlib, "import_module", **patch):
+                with self.assertRaises(consumer.KitError) as caught:
+                    consumer.load_kit_with_metadata(KIT)
+            self.assertEqual(caught.exception.code, "kit_unavailable")
+            self.assertEqual(caught.exception.metadata["observed_revision"], consumer.KIT_REVISION)
+            self.assertEqual(caught.exception.metadata["verification"], "read_failed")
+            self.assertNotIn("private import detail", str(caught.exception))
+            self.assertIsNone(caught.exception.__context__)
 
 
 class FixtureInputTests(unittest.TestCase):

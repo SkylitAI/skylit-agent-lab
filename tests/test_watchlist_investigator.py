@@ -110,7 +110,7 @@ class WatchlistInvestigatorTests(unittest.TestCase):
             scripts.mkdir()
             for name in ("run.py", "fixture.json"):
                 shutil.copy2(PACKAGE / name, copied / name)
-            for name in ("probe_kit_watchlist.py", "watchlist_time.py"):
+            for name in ("probe_kit_watchlist.py", "watchlist_time.py", "git_provenance.py"):
                 shutil.copy2(ROOT / "scripts" / name, scripts)
             result = run_experiment("--kit", KIT.resolve(), script=copied / "run.py", cwd=root)
             self.assertEqual(result.returncode, 0, result.stderr)
