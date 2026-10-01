@@ -110,7 +110,7 @@ class WatchlistInvestigatorTests(unittest.TestCase):
             scripts.mkdir()
             for name in ("run.py", "fixture.json"):
                 shutil.copy2(PACKAGE / name, copied / name)
-            for name in ("probe_kit_watchlist.py", "watchlist_time.py", "git_provenance.py"):
+            for name in ("probe_kit_watchlist.py", "watchlist_time.py", "git_provenance.py", "run_records.py", "record_files.py"):
                 shutil.copy2(ROOT / "scripts" / name, scripts)
             result = run_experiment("--kit", KIT.resolve(), script=copied / "run.py", cwd=root)
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -189,6 +189,7 @@ class WatchlistInvestigatorTests(unittest.TestCase):
                 for previous in (False, True):
                     with self.subTest(contents=contents[:20], previous=previous):
                         output.unlink(missing_ok=True)
+                        Path(str(output) + ".run.json").unlink(missing_ok=True)
                         if previous:
                             output.write_text("Keep this report.\n")
                         fixture.write_bytes(contents)
