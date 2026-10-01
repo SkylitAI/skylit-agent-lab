@@ -20,12 +20,12 @@ a dated result for the actual version and environment.
 Before a PR:
 
 ```sh
-python3 -m unittest discover -s tests -p test_template.py -v
-python3 -m compileall -q tests templates/experiment
+python3 scripts/validate_experiments.py
+python3 -m unittest discover -s tests -v
+python3 -m compileall -q scripts tests templates/experiment
 ```
 
-Before sharing, check for broken commands, invented capability claims, unnecessary
-abstractions, weak tests and repetitive prose. Inspect the staged diff and report
-exact checks and remaining limits. Do not treat a passing manifest as
+Apply the [AI slop check](CONTRIBUTING.md#before-review), inspect the staged diff
+and report exact checks and remaining limits. Do not treat a passing manifest as
 proof that an experiment runs or is safe to run. Shared maintained clients belong
 in Agent Kit; Lab must pin the Kit revision it uses.

@@ -1,7 +1,7 @@
 # Foundation scope
 
-This first increment supplies a runnable synthetic template and behavioral tests.
-Metadata validation and the contribution guide follow in the next increment. It does not yet supply a
+This iteration supplies a runnable synthetic template, metadata validation,
+behavioral tests and a reviewed contribution route. It does not yet supply a
 trading agent, live data adapter or evaluation engine.
 
 | Target | Status |
