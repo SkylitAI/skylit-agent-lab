@@ -1,6 +1,7 @@
 """Build committed local sources, then run a fixed probe with Docker networking off."""
 
 import argparse
+import json
 import os
 from pathlib import Path
 import re
@@ -46,12 +47,69 @@ def stage_checkout(source, destination):
     return revision
 
 
-def cleanup(command):
+def docker_client(config):
+    # Read endpoint/plugin metadata only; never copy the user's Docker config.
+    endpoint = os.environ.get("DOCKER_HOST") if not os.environ.get("DOCKER_CONTEXT") else None
+    if not endpoint:
+        endpoint = subprocess.run(
+            ["docker", "context", "inspect", "--format", "{{.Endpoints.docker.Host}}"],
+            check=True, capture_output=True, text=True, timeout=15,
+        ).stdout.strip()
+    if not endpoint.startswith("unix://") or not Path(endpoint[7:]).is_absolute():
+        raise ValueError("Use a local Docker Engine through a Unix socket.")
+    plugins = json.loads(subprocess.run(
+        ["docker", "info", "--format", "{{json .ClientInfo.Plugins}}"],
+        check=True, capture_output=True, text=True, timeout=15,
+    ).stdout)
+    config.mkdir()
+    (config / "config.json").write_text("{}\n")
+    for plugin in plugins or []:
+        if plugin.get("Name") == "buildx":
+            executable = Path(plugin["Path"]).resolve(strict=True)
+            (config / "cli-plugins").mkdir()
+            (config / "cli-plugins/docker-buildx").symlink_to(executable)
+            break
+    else:
+        raise ValueError("Docker Buildx is required; install it through your Docker distribution.")
+    command = ["docker", "--config", str(config), "--host", endpoint]
+    env = {"PATH": os.environ.get("PATH", os.defpath), "LC_ALL": "C", "DOCKER_CONFIG": str(config)}
+
+    def run(*args, **kwargs):
+        return subprocess.run([*command, *map(str, args)], env=env, stdin=subprocess.DEVNULL, **kwargs)
+
+    return run
+
+
+def run_probe(stage, client, without_kit):
+    container = "skylit-lab-check-" + uuid.uuid4().hex
+    image = None
     try:
-        subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        client("build", "--file", stage / "lab/evaluations/Dockerfile",
+               "--iidfile", stage / "image-id", stage, check=True, timeout=600)
+        image = (stage / "image-id").read_text().strip()
+        if not re.fullmatch(r"sha256:[0-9a-f]{64}", image):
+            image = None
+            raise ValueError("Docker did not return a valid image ID.")
+        print(f"Local image: {image}", flush=True)
+        command = ["run", "--rm", "--pull", "never", "--name", container,
+                   "--network", "none", "--read-only", "--cap-drop", "ALL",
+                   "--security-opt", "no-new-privileges", "--user", "65534:65534",
+                   "--pids-limit", "64", "--memory", "256m", "--cpus", "1",
+                   "--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=128m,mode=1777", image]
+        if without_kit:
+            command.append("--without-kit")
+        client(*command, check=True, timeout=120)
+    finally:
+        # Names identify only this invocation; the temporary client config still exists.
+        commands = [["rm", "--force", container]]
+        if image:
+            commands.append(["image", "rm", image])
+        for command in commands:
+            try:
+                client(*command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                        timeout=15, check=False)
-    except (OSError, subprocess.SubprocessError):
-        print("Docker cleanup was incomplete; inspect this run's local resources.")
+            except (OSError, subprocess.SubprocessError):
+                print("Docker cleanup was incomplete; inspect this run's local resources.")
 
 
 def main():
@@ -60,11 +118,11 @@ def main():
     mode.add_argument("--kit", type=Path, help="Clean local checkout at the experiment's pinned Kit revision")
     mode.add_argument("--without-kit", action="store_true", help="Check isolation and independent seeds only; Watchlist remains unverified")
     args = parser.parse_args()
-    container = "skylit-lab-check-" + uuid.uuid4().hex
-    image = None
     try:
         with tempfile.TemporaryDirectory(prefix="skylit-lab-isolation-") as directory:
-            stage = Path(directory)
+            base = Path(directory)
+            stage = base / "context"
+            stage.mkdir()
             lab_revision = stage_checkout(ROOT, stage / "lab")
             if args.kit is not None:
                 kit_revision = stage_checkout(args.kit, stage / "kit")
@@ -73,31 +131,12 @@ def main():
                 (stage / "kit").mkdir()
                 (stage / "kit/unverified.txt").write_text("Kit was explicitly omitted.\n")
                 print(f"Committed Lab: {lab_revision}; Kit: UNVERIFIED (explicitly omitted)", flush=True)
-            subprocess.run(["docker", "build", "--file", str(stage / "lab/evaluations/Dockerfile"),
-                            "--iidfile", str(stage / "image-id"), str(stage)], check=True, timeout=600)
-            image = (stage / "image-id").read_text().strip()
-            if not re.fullmatch(r"sha256:[0-9a-f]{64}", image):
-                image = None
-                raise ValueError("Docker did not return a valid image ID.")
-            print(f"Local image: {image}", flush=True)
-            command = ["docker", "run", "--rm", "--pull", "never", "--name", container,
-                       "--network", "none", "--read-only", "--cap-drop", "ALL",
-                       "--security-opt", "no-new-privileges", "--user", "65534:65534",
-                       "--pids-limit", "64", "--memory", "256m", "--cpus", "1",
-                       "--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=128m,mode=1777", image]
-            if args.without_kit:
-                command.append("--without-kit")
-            subprocess.run(command, check=True, timeout=120)
+            client = docker_client(base / "client")
+            run_probe(stage, client, args.without_kit)
     except (OSError, ValueError, subprocess.SubprocessError) as error:
-        reason = str(error) if isinstance(error, ValueError) else type(error).__name__
+        reason = str(error).rstrip(".") if isinstance(error, ValueError) else type(error).__name__
         print(f"Isolation check failed: {reason}. Check source paths, Git and Docker availability.")
         return 1
-    finally:
-        # These names identify only resources created by this invocation.
-        if shutil.which("docker"):
-            cleanup(["docker", "rm", "--force", container])
-            if image:
-                cleanup(["docker", "image", "rm", image])
     return 0
 
 

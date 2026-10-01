@@ -1,7 +1,8 @@
 # Offline checks in Docker
 
 Run the fixed isolation probe and synthetic examples from a clean, committed Lab
-checkout with Python 3.11+, Git and a local Docker Engine:
+checkout with Python 3.11+, Git and a local Docker Engine with Buildx on macOS
+or Linux (Unix socket):
 
 ```sh
 python3 scripts/run_isolated.py --kit /path/to/clean-pinned-kit
@@ -10,6 +11,12 @@ python3 scripts/run_isolated.py --kit /path/to/clean-pinned-kit
 Kit must be at the revision required by Watchlist. The wrapper only uses local
 checkouts; obtain dependencies separately. It rejects uncommitted or untracked
 source changes so a passing run names the code it actually tested.
+
+The wrapper discovers only the active local Docker socket and installed Buildx
+executable from client metadata. Build, run and cleanup then use an empty
+temporary Docker configuration and a minimal client environment. Registry auth,
+configured proxies and other client settings are not copied. The build uses the
+public base image without registry credentials.
 
 The wrapper stages fresh local Git clones and removes remotes, hooks and reflogs.
 Ignored reports, environment files and the original Git configuration do not
