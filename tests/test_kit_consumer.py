@@ -1,5 +1,6 @@
 """Exercise the real pinned Kit from a credential-free, socket-blocked process."""
 
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -7,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 from scripts import probe_kit_watchlist as consumer
 
@@ -94,7 +96,11 @@ class KitConsumerTests(unittest.TestCase):
         wrong_metric["gamma"]["meta"]["metric"] = "vanna"
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "invalid.json"
-            for contents in ("not json", "[]", json.dumps(wrong_metric)):
+            for contents, message in (
+                ("not json", "Fixture must contain valid UTF-8 JSON within the nesting limit."),
+                ("[]", "Fixture requires gamma, vanna and flow objects."),
+                (json.dumps(wrong_metric), "Heatmap response has invalid shape or wrong metric."),
+            ):
                 with self.subTest(contents=contents[:40]):
                     path.write_text(contents)
                     result = self.run_probe("--fixture", str(path))
@@ -102,6 +108,7 @@ class KitConsumerTests(unittest.TestCase):
                     self.assertEqual(result.stdout, "")
                     self.assertIn("error:", result.stderr)
                     self.assertNotIn("Traceback", result.stderr)
+                    self.assertEqual(result.stderr, f"error: {message}\n")
 
     @unittest.skipUnless(KIT.is_dir(), "Set SKYLIT_AGENT_KIT to the pinned local checkout")
     def test_dirty_checkout_is_rejected(self):
@@ -119,10 +126,100 @@ class KitConsumerTests(unittest.TestCase):
 
 
 class FixtureInputTests(unittest.TestCase):
+    def test_hash_covers_exact_bytes_including_whitespace(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "fixture.json"
+            path.write_bytes(b"{}")
+            parsed, digest = consumer.load_fixture_with_hash(path)
+            self.assertEqual(parsed, {})
+            self.assertEqual(digest, "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a")
+            path.write_bytes(b"{} \r\n")
+            changed, changed_digest = consumer.load_fixture_with_hash(path)
+            self.assertEqual(changed, parsed)
+            self.assertEqual(changed_digest, hashlib.sha256(b"{} \r\n").hexdigest())
+            self.assertNotEqual(changed_digest, digest)
+            self.assertEqual(consumer.load_fixture(path), changed)
+
+    def test_hash_and_parser_share_the_consumed_buffer(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "fixture.json"
+            content = b'{"original": true}'
+            path.write_bytes(content)
+            original_loads = json.loads
+
+            def replace_after_read(value):
+                path.write_bytes(b'{"replacement": true}')
+                return original_loads(value)
+
+            with mock.patch.object(consumer.json, "loads", side_effect=replace_after_read):
+                parsed, digest = consumer.load_fixture_with_hash(path)
+            self.assertEqual(parsed, {"original": True})
+            self.assertEqual(digest, hashlib.sha256(content).hexdigest())
+
+    def test_complete_invalid_bytes_keep_hash_without_payload_in_error(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "private-name.json"
+            for content in (b"", b"private malformed payload", b"\xff", b"[" * 2000 + b"]" * 1999):
+                with self.subTest(content=content[:20]):
+                    path.write_bytes(content)
+                    with self.assertRaises(consumer.FixtureError) as caught:
+                        consumer.load_fixture_with_hash(path)
+                    error = caught.exception
+                    self.assertIsInstance(error, ValueError)
+                    self.assertEqual((error.code, error.hash_state), ("invalid_fixture", "complete"))
+                    self.assertEqual(error.sha256, hashlib.sha256(content).hexdigest())
+                    self.assertEqual(str(error), "Fixture must contain valid UTF-8 JSON within the nesting limit.")
+                    self.assertIsNone(error.__context__)
+
+    def test_incomplete_input_has_no_full_hash(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "fixture.json"
+            path.write_bytes(b" " * 65537)
+            for source, code, state in ((path, "input_too_large", "too_large"),
+                                        (Path(directory), "input_unreadable", "read_failed"),
+                                        (path.with_name("missing.json"), "input_unreadable", "read_failed")):
+                with self.subTest(code=code, source=source.name):
+                    with self.assertRaises(consumer.FixtureError) as caught:
+                        consumer.load_fixture_with_hash(source)
+                    self.assertEqual((caught.exception.code, caught.exception.hash_state), (code, state))
+                    self.assertIsNone(caught.exception.sha256)
+                    self.assertIsNone(caught.exception.__context__)
+            with mock.patch.object(consumer.os, "open", side_effect=PermissionError("private path")):
+                with self.assertRaises(consumer.FixtureError) as caught:
+                    consumer.load_fixture_with_hash(path)
+            self.assertEqual((caught.exception.code, caught.exception.hash_state, caught.exception.sha256),
+                             ("input_unreadable", "read_failed", None))
+            self.assertEqual(str(caught.exception), "Choose a readable regular JSON file for --fixture.")
+            self.assertIsNone(caught.exception.__context__)
+
+    @unittest.skipUnless(hasattr(os, "mkfifo"), "Named pipes require POSIX")
+    def test_fifo_is_rejected_even_after_a_stale_regular_file_check(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "fixture.pipe"
+            os.mkfifo(path)
+            code = """
+from pathlib import Path
+import runpy, sys
+from unittest import mock
+module = runpy.run_path(sys.argv[1])
+with mock.patch.object(Path, 'is_file', return_value=True):
+    try:
+        module['load_fixture_with_hash'](sys.argv[2])
+    except module['FixtureError'] as error:
+        assert (error.code, error.hash_state, error.sha256) == ('input_unreadable', 'read_failed', None)
+    else:
+        raise AssertionError('A FIFO was accepted as a regular fixture')
+"""
+            result = subprocess.run([sys.executable, "-I", "-B", "-c", code, str(PROBE), str(path)],
+                                    capture_output=True, text=True, timeout=5, check=False)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_fixture_read_has_an_inclusive_64_kib_limit(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "fixture.json"
-            path.write_bytes(b"{}" + b" " * (65536 - 2))
+            content = b"{}" + b" " * (65536 - 2)
+            path.write_bytes(content)
+            self.assertEqual(consumer.load_fixture_with_hash(path), ({}, hashlib.sha256(content).hexdigest()))
             self.assertEqual(consumer.load_fixture(path), {})
             path.write_bytes(path.read_bytes() + b" ")
             with self.assertRaisesRegex(ValueError, "64 KiB"):
