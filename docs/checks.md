@@ -33,6 +33,43 @@ GitHub Actions runs the same checks on Python 3.11 and 3.14 using synthetic loca
 inputs and no service credentials. Setup downloads Python and pinned actions;
 this workflow does not claim network isolation. CI does not obtain Kit or add a
 cross-repository token, so its Kit-dependent tests remain skipped and unverified.
+
+### Hosted Kit coverage prerequisite
+
+Read-only settings inspection on 2026-10-01 found both repositories INTERNAL,
+Lab's default workflow token read-only, no repository or inherited organization
+Actions secrets/variables, no configured environments, and Kit's Actions sharing
+access set to `none`. The current workflow has only `contents: read`.
+[GitHub documents that `GITHUB_TOKEN` is limited to its workflow repository](https://docs.github.com/en/actions/concepts/security/github_token);
+[checking out another nonpublic repository needs separate authorized access](https://github.com/actions/checkout#checkout-multiple-repos-private).
+Increasing Lab's token permissions would not give that token access to Kit.
+
+At Lab `81a65f9a7e88a4d9ce2b81c6c9c9aa7db18ef639`, each hosted Python job
+discovered 178 tests: 144 executed and 34 skipped because the pinned Kit was
+absent. The same revision passed all 178 locally on Python 3.11.14 and 3.14.5
+with Kit `0f82039759ef4db9d5b3dbd90f52863f8074f2a6` and zero skips.
+The 34 skipped cases are:
+
+| Test module | Skipped cases |
+|---|---:|
+| `test_kit_consumer` | 10 |
+| `test_record_files` | 1 |
+| `test_setup_watchlist` | 1 |
+| `test_watchlist_investigator` | 9 |
+| `test_watchlist_live` | 6 |
+| `test_watchlist_records` | 7 |
+
+Closing hosted coverage requires owner-approved read access to Kit for a trusted
+integration job, such as a GitHub App installation token or fine-grained token
+limited to Kit's `Contents: read`. No such CI credential is configured here. Its
+setup and trust boundary require separate approval; do not expose it to untrusted
+PR code or use `pull_request_target` to run that code with secrets. A future
+checkout must select the exact documented Kit commit, use
+`persist-credentials: false`, verify the revision and cleanliness, and require
+zero Kit-related skips. A substitute fixture, copied internal source or a public
+visibility change does not close this coverage gap. No access setting or
+credential was changed for this check.
+
 Syntax compilation includes experiments but does not execute them. Metadata
 validation never runs contributed commands. Repository tests themselves are
 executable PR code.
