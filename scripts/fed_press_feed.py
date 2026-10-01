@@ -15,6 +15,12 @@ SOURCE_URL = "https://www.federalreserve.gov/feeds/press_all.xml"
 MAX_BYTES = 512 * 1024
 MAX_ITEMS = 100
 SECONDS = 10
+PUBLICATION_DATE = re.compile(
+    r"(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), [0-9]{1,2} "
+    r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) [0-9]{4} "
+    r"(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9] "
+    r"(?:GMT|[+-](?:[01][0-9]|2[0-3])[0-5][0-9])"
+)
 
 
 class _FeedError(ValueError):
@@ -43,6 +49,8 @@ def _item(element):
             or any(part in {".", ".."} for part in link.split("/")[3:])):
         raise _FeedError("Item link is not a canonical Board HTTPS URL.")
     try:
+        if not PUBLICATION_DATE.fullmatch(date):
+            raise ValueError
         published = parsedate_to_datetime(date)
         if published.tzinfo is None:
             raise ValueError

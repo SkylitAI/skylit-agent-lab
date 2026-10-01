@@ -107,6 +107,21 @@ class ParserTests(unittest.TestCase):
             with self.subTest(link=link):
                 self.invalid(document(item(link=link)))
 
+    def test_publication_date_rejects_normalized_offsets_and_trailing_junk(self):
+        for zone in ("+0060", "+1260", "+23", "-0060", "-1260", "-23",
+                     "GMT private-marker", "+0000 private-marker", "+2400", "-2400", "-0000"):
+            with self.subTest(zone=zone):
+                result = self.invalid(document(item(date="Wed, 01 Jan 2020 12:00:00 " + zone)))
+                self.assertNotIn("private-marker", result["error"])
+
+    def test_publication_date_accepts_source_gmt_format_and_valid_offsets(self):
+        for zone, utc_hour in (("GMT", "12:00"), ("+0000", "12:00"),
+                               ("+0530", "06:30"), ("-0700", "19:00")):
+            with self.subTest(zone=zone):
+                result = feed.parse_feed(document(item(date="Wed, 01 Jan 2020 12:00:00 " + zone)))
+                self.assertEqual(result["status"], "available")
+                self.assertEqual(result["items"][0]["published_at"], f"2020-01-01T{utc_hour}:00+00:00")
+
     def test_byte_and_item_limits(self):
         raw = document(item())
         self.assertEqual(feed.parse_feed(raw.ljust(512 * 1024))["status"], "available")

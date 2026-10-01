@@ -44,9 +44,14 @@ channel title/link/description. At most 100 items may occur, directly under that
 channel. Every item must have exactly one nonblank plain-text title, canonical
 HTTPS link on `www.federalreserve.gov`, and timezone-aware RSS publication date.
 Links have no credentials, port, query, fragment, encoded path or dot segments.
-Dates are converted to UTC without substituting a retrieval time. Titles retain
-decoded text; nested or escaped markup is rejected. DTD/entity declarations are
-forbidden; standard XML character escaping such as `&amp;` remains valid.
+The accepted date profile is `Wdy, D Mon YYYY HH:MM:SS GMT` or the same form
+with a signed four-digit `+/-HHMM` offset: English three-letter weekday/month,
+one or two day digits, four year digits, and two digits per time/offset component.
+Hours must be 00–23 and minutes/seconds 00–59; calendar dates must be valid.
+Trailing text, shortened or overflowing offsets, and the unknown `-0000` zone
+are rejected. Dates are converted to UTC without substituting a retrieval time.
+Titles retain decoded text; nested or escaped markup is rejected. DTD/entity
+declarations are forbidden; standard XML escaping such as `&amp;` remains valid.
 
 The returned dictionary is JSON-compatible:
 
