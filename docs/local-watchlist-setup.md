@@ -5,6 +5,11 @@ Lab and Kit checkouts you already have. The setup copies committed Git files,
 pins Kit, runs the existing offline Watchlist and writes a reusable launcher.
 It does not download repositories, provision keys or run a model/live service.
 
+This helper prepares Watchlist and requires Kit. For Journal Reviewer or Market
+Brief alone, use their [offline commands](using-your-agent.md#run-the-offline-example)
+directly from the Lab checkout; neither needs Kit or this helper. A prepared
+workspace includes the full Lab checkout: enter `lab/` to use those commands.
+
 ## Prerequisites
 
 - Python 3.11+ and Git available in the environment that runs the command.

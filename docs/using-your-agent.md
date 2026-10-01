@@ -2,7 +2,8 @@
 
 Run an example, adapt it with your existing agent, then contribute a small
 experiment. You need repository access, Git and Python 3.11+. No Python packages,
-Skylit key or model are needed for the offline examples. On Windows, replace
+Skylit key or model are needed for the offline examples. Journal Reviewer and
+Market Brief do not need Kit; Watchlist uses the documented exact Kit pin. On Windows, replace
 `python3` with `py -3`; native Windows execution remains unverified.
 
 Lab currently provides deterministic Python workflows. Your coding agent can
@@ -32,13 +33,37 @@ overwriting or resetting that checkout. Review [AGENTS.md](../AGENTS.md) first.
 ```sh
 git clone https://github.com/SkylitAI/skylit-agent-lab.git
 cd skylit-agent-lab
-python3 templates/experiment/run.py
 ```
 
-Open `templates/experiment/reports/example.md`. It contains fictional observations
-and a visible `Not provided` gap. Change one note in the template's `fixture.json`
-and rerun to see the change. This template replaces its generated report on rerun;
-it refuses an output path that would overwrite the input fixture.
+Choose the workflow for your task:
+
+| Workflow | What it produces | Kit needed? |
+|---|---|---|
+| [Watchlist Investigator](../experiments/watchlist-investigator/README.md) | Fictional GEX/VEX/flow observations, gaps and source-time evidence | Exact pinned checkout |
+| [Journal Reviewer](../experiments/journal-reviewer/README.md) | Closed USD cash-equity paper-trade calculations and supplied notes; no inferred strategy or tax analysis | No |
+| [Market Brief](../experiments/market-brief/README.md) | The first 1–20 entries from one RSS feed, with publication times and source gaps; not a broad market analysis | No |
+
+From the Lab root, Journal and Market run with bundled fictional inputs:
+
+```sh
+python3 -X utf8 -I -B experiments/journal-reviewer/run.py
+python3 -X utf8 -I -B experiments/market-brief/run.py
+```
+
+Journal accepts an explicit `--input` closed paper-trade CSV; Market accepts saved
+RSS with `--input`. Read the chosen README before supplying private inputs.
+Market's separate `--fetch` option attempts one bounded public Federal Reserve
+RSS request, without credentials or a model. It is never selected by default.
+
+All three seeds print private report and `.run.json` paths. Keep both local;
+records measure the Python process, not the launching agent, and are not adoption
+telemetry. The two writes are not atomic: check command exit status and both
+artifacts. Use a new `--output` filename for another run.
+
+For the smallest editable scaffold, run `python3 templates/experiment/run.py`
+and open `templates/experiment/reports/example.md`. Its fictional observations
+include a visible `Not provided` gap. This template replaces its generated
+report on rerun and has no seed run-record sidecar.
 
 For fictional GEX, VEX and flow, follow the
 [Watchlist setup](../experiments/watchlist-investigator/README.md). It obtains
@@ -61,10 +86,12 @@ only when you choose live use. Contribute through [the same checks and PR path](
 ```text
 Work only in this Skylit Agent Lab checkout. Read AGENTS.md,
 docs/using-your-agent.md and the selected example's README. Check Git and
-Python 3.11+, run the standalone template offline, and show me its report.
-Explain which observations are fictional and which inputs are missing.
-If I choose Watchlist, follow its exact pinned-Kit setup and use a new output
-filename. Preserve existing checkouts and reports. Do not request keys in chat,
+Python 3.11+, and help me choose Watchlist Investigator, Journal Reviewer or
+Market Brief. Run the selected seed offline with its bundled fictional input,
+and show me its report and private run-record sidecar. Explain fictional
+observations, missing inputs and the workflow's limits. Only Watchlist needs
+its exact pinned-Kit setup; Journal and Market need no Kit, key or model.
+Use a new output filename. Preserve existing checkouts and reports. Do not request keys in chat,
 read private vaults, make live calls or publish anything from this setup prompt.
 When I ask to contribute, help copy the template, update its manifest and
 synthetic example, run the relevant checks, and prepare a small reviewable diff.
@@ -122,7 +149,8 @@ Model entitlement and credentials are separate from Skylit access.
 
 ## Use your Skylit key locally
 
-The experiment's `run.py` remains synthetic-only. The separate
+Watchlist Investigator's `run.py` remains synthetic-only. Journal and Market do
+not use a Skylit key; Market's explicit public-feed fetch is separate. The separate
 `scripts/watchlist_live.py` entry point reuses the pinned Kit REST client and
 defaults to dry-run. It has mocked transport tests; authenticated end-to-end
 verification remains pending. It produces a report, not the experiment's offline
@@ -209,7 +237,7 @@ need repository access until a public preview and fork workflow are verified.
 | GitHub denies access | Request repository access; a Skylit key cannot fix GitHub permissions |
 | Python is missing or too old | Check Python 3.11+ in the environment that actually runs commands; on Windows try `py -3 --version` |
 | Kit revision/cleanliness refused | Use the documented separate pinned checkout; do not reset unrelated changes |
-| Watchlist output already exists | Choose a new `--output` filename |
+| Seed report or sidecar already exists | Choose a new `--output` filename; preserve both existing files |
 | No hidden key prompt in the host | Use your own interactive terminal for the Kit live command |
 | Access, credit or request cap failure | Read the sanitized error and account limits; do not auto-increase caps or retry |
 | Tests report skips | Supply the pinned Kit as described in checks.md before claiming full runtime verification |
