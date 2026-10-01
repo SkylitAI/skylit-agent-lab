@@ -3,8 +3,11 @@
 A run record describes one Watchlist Python process and its local report. It
 does not measure the agent or LLM host that launched that process. A later host
 record may link the exact record-file hash and record its own usage separately.
-The contract, bounded JSON decoder, strict validator and local persistence helper
-are implemented. No workflow currently produces these records.
+[Watchlist Investigator](../experiments/watchlist-investigator/README.md) writes
+`<output>.run.json` beside its report. A successful command validates and saves
+both artifacts; ordinary computation failures save a stopped record when the
+sidecar is writable. Early CLI/preflight errors and process termination cannot
+guarantee a record. Check the command's exit status as well as record contents.
 
 The intended shared envelope is versioned, but v1 accepts only
 `watchlist-investigator` in `offline_synthetic` mode. Market Brief, Journal,
@@ -17,7 +20,7 @@ hex: 40 characters for Git revisions, 64 for exact-byte SHA-256 digests.
 | Group | Exact fields and meaning |
 |---|---|
 | Root | `schema_version` (integer `1`), `experiment_id`, `mode`, and every group below. |
-| `lab` | `revision` (SHA or null), `state` (`clean`, `dirty`, `unknown`). A null revision requires unknown state. Dirty records do not claim equivalence to committed bytes. |
+| `lab` | `revision` (SHA or null), `state` (`clean`, `dirty`, `unknown`). This is an observation before creating artifacts, not a file snapshot. A null revision requires unknown state. Dirty records do not claim equivalence to committed bytes. |
 | `kit` | `required_revision` (SHA), `observed_revision` (SHA or null), `verification` (`verified`, `revision_mismatch`, `dirty`, `not_checked`, `read_failed`). Verified means the observed pin matches and the checkout passed its cleanliness check. |
 | `inputs` | A one-element array containing an object with `role: synthetic_fixture`, `sha256` (digest or null), `hash_state` (`complete`, `too_large`, `read_failed`, `not_read`). Only complete has a digest; other states explain its absence. No input path is recorded. |
 | `execution` | `started_at` and `finished_at`: actual aware UTC timestamps; finish may be null when unavailable. Wall-clock adjustment can make finish earlier; do not infer duration or change the workflow outcome from these values. |
@@ -62,9 +65,10 @@ checks an already decoded object. Both validation entry points return the object
 without modifying it. The bytes entry point enforces the size/nesting limits.
 It never reads Git, other files, environment variables or network state, and
 never executes record content. Invalid data raises `RecordError` with fixed
-diagnostics that do not echo submitted content. Workflow integration and hashing
-the actual consumed input buffer are separate increments; a decoder or schema
-pass proves neither behavior.
+diagnostics that do not echo submitted content. The workflow hashes the same
+bounded fixture buffer it parses and emits only allowlisted provenance. A
+decoder or schema pass alone does not prove those observations or file writes;
+the workflow tests exercise actual successful and stopped commands separately.
 
 Run the contract tests without Kit: `python3 -m unittest discover -s tests -p test_run_records.py -v`.
 
@@ -109,8 +113,9 @@ check the command's exit status as well. An unavailable parent directory is a
 `record_unavailable` error; `record_exists` specifically identifies a collision
 at the sidecar path.
 
-Keep both artifacts in ignored local reports directories; custom destinations
-may not be ignored by Git. Nothing is uploaded. Run persistence tests with
+Run-record filenames (`*.run.json`) are ignored by Lab's Git rules. Keep both
+artifacts in ignored local reports directories; custom Markdown destinations may
+not be ignored. Nothing is uploaded. Run persistence tests with
 `python3 -m unittest discover -s tests -p test_record_files.py -v`; the real-Kit
 writer test needs the documented pinned local checkout, while the filesystem
 failure tests do not.
