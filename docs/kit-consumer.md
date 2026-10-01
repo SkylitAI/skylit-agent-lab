@@ -86,6 +86,15 @@ or live-service support.
 `render_result` renders those rows without reading the fixture again or mutating
 them. `render_fixture` retains the original fixture-to-report interface.
 
+`load_fixture_with_hash` returns the parsed value and digest of the exact consumed
+buffer. Safe input errors retain a complete malformed-input hash when available;
+oversized or unreadable input has no complete hash. `load_fixture` retains the
+parsed-value-only interface. `load_kit_with_metadata` returns the module and
+required/observed revision evidence, qualified by verification state; `load_kit`
+retains the module-only interface. Git state is a pre-run observation, not an
+atomic file snapshot. These interfaces supply the experiment's
+[local run record](run-record.md).
+
 Basic Lab checks do not require Kit. The tests look for `SKYLIT_AGENT_KIT` or a
 sibling checkout; if absent, real-Kit tests visibly skip while the wrong-pin
 and fixture-loading checks still run. **A skipped run leaves Kit consumption
@@ -101,7 +110,8 @@ renderer and its documented source/watchlist/compatibility boundaries were read
 at the pinned revision; no private source or new domain calculation was used.
 
 Watchlist Investigator records this full Kit pin in its experiment manifest.
-It adds explicit synthetic source-time evidence using these parsed rows. Live
-access, run records and host verification need later work.
+It adds explicit synthetic source-time evidence using these parsed rows and saves
+a private validated run record beside each report. Ordinary failures can save a
+stopped record without a report. Live access and host verification need later work.
 Review and rerun this proof before changing Kit's revision; the consumer and
 experiment reuse Kit without changing its implementation.

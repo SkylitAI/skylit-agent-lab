@@ -1,54 +1,120 @@
 """Render fictional watchlist responses through an explicitly pinned local Kit."""
 
 import argparse
+import hashlib
 import importlib
 import json
+import os
 from pathlib import Path
+import stat
 import subprocess
 import sys
+
+
+if __package__:
+    from .git_provenance import inspect_checkout
+else:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from git_provenance import inspect_checkout
 
 
 KIT_REVISION = "0f82039759ef4db9d5b3dbd90f52863f8074f2a6"
 FIXTURE = Path(__file__).resolve().parents[1] / "examples" / "kit-watchlist.json"
 
 
-def load_fixture(path):
-    """Read at most 64 KiB of synthetic JSON before Kit validates its fields."""
+class FixtureError(ValueError):
+    """A fixed safe failure code and provenance, without source paths or payloads."""
+
+    def __init__(self, code, *, sha256=None):
+        message, self.hash_state = {
+            "input_unreadable": ("Choose a readable regular JSON file for --fixture.", "read_failed"),
+            "input_too_large": ("Fixture exceeds the 64 KiB limit; use a smaller synthetic fixture.", "too_large"),
+            "invalid_fixture": ("Fixture must contain valid UTF-8 JSON within the nesting limit.", "complete"),
+        }[code]
+        self.code = code
+        self.sha256 = sha256
+        super().__init__(message)
+
+
+def load_fixture_with_hash(path):
+    """Parse and hash one bounded buffer; never label an oversized prefix complete."""
     path = Path(path)
+    content = None
     try:
         if not path.is_file():
             raise OSError("Not a regular file")
-        with path.open("rb") as source:
+        # Recheck the opened descriptor; a FIFO replacement must not block open.
+        with open(path, "rb", opener=lambda name, flags: os.open(name, flags | getattr(os, "O_NONBLOCK", 0))) as source:
+            if not stat.S_ISREG(os.fstat(source.fileno()).st_mode):
+                raise OSError("Not a regular file")
             content = source.read(65537)
     except OSError:
-        raise ValueError("Choose a readable regular JSON file for --fixture.") from None
+        # Raise outside the handler so private exception context is not retained.
+        content = None
+    if content is None:
+        raise FixtureError("input_unreadable")
     if len(content) > 65536:
-        raise ValueError("Fixture exceeds the 64 KiB limit; use a smaller synthetic fixture.")
+        raise FixtureError("input_too_large")
+    digest = hashlib.sha256(content).hexdigest()
     try:
-        return json.loads(content.decode("utf-8"))
+        return json.loads(content.decode("utf-8")), digest
     except (ValueError, RecursionError):
-        raise ValueError("Fixture must contain valid UTF-8 JSON within the nesting limit.") from None
+        pass
+    raise FixtureError("invalid_fixture", sha256=digest)
+
+
+def load_fixture(path):
+    """Keep the original parsed-value-only interface for existing consumers."""
+    return load_fixture_with_hash(path)[0]
+
+
+class KitError(ValueError):
+    """A fixed failure code and qualified revision evidence, without raw errors."""
+
+    def __init__(self, code, observed_revision=None):
+        message, verification = {
+            "kit_unavailable": ("Cannot load --kit; provide a readable pinned Kit repository root and ensure Git is available.", "read_failed"),
+            "kit_mismatch": (f"Kit revision must be {KIT_REVISION}; found {observed_revision}.", "revision_mismatch"),
+            "kit_dirty": ("Kit checkout must be clean; review local changes before running.", "dirty"),
+        }[code]
+        self.code = code
+        self.metadata = {"required_revision": KIT_REVISION, "observed_revision": observed_revision,
+                         "verification": verification}
+        super().__init__(message)
+
+
+def load_kit_with_metadata(path):
+    """Verify the requested checkout and imported module; never install or fetch."""
+    checkout = inspect_checkout(path)
+    revision = checkout["revision"]
+    if revision is None:
+        raise KitError("kit_unavailable")
+    if revision != KIT_REVISION:
+        raise KitError("kit_mismatch", revision)
+    if checkout["state"] == "dirty":
+        raise KitError("kit_dirty", revision)
+    if checkout["state"] != "clean":
+        raise KitError("kit_unavailable", revision)
+    module = None
+    try:
+        root = Path(path).resolve()
+        expected = root / "skylit_agent_kit" / "watchlist.py"
+        if expected.is_file():
+            sys.path.insert(0, str(root))
+            module = importlib.import_module("skylit_agent_kit.watchlist")
+            if Path(module.__file__).resolve() != expected:
+                module = None
+    except Exception:
+        # Do not retain an import exception containing private paths or details.
+        module = None
+    if module is None:
+        raise KitError("kit_unavailable", revision)
+    return module, {"required_revision": KIT_REVISION, "observed_revision": revision, "verification": "verified"}
 
 
 def load_kit(path):
-    """Check the local revision before importing; never install or fetch anything."""
-    root = Path(path).resolve()
-    revision = subprocess.run(
-        ["git", "-C", str(root), "rev-parse", "HEAD"],
-        check=True, capture_output=True, text=True,
-    ).stdout.strip()
-    if revision != KIT_REVISION:
-        raise ValueError(f"Kit revision must be {KIT_REVISION}; found {revision}.")
-    changes = subprocess.run(
-        ["git", "-C", str(root), "status", "--porcelain", "--untracked-files=all"],
-        check=True, capture_output=True, text=True,
-    ).stdout
-    if changes:
-        raise ValueError("Kit checkout must be clean; review local changes before running.")
-    if not (root / "skylit_agent_kit" / "watchlist.py").is_file():
-        raise ValueError("--kit must name the Kit repository root.")
-    sys.path.insert(0, str(root))
-    return importlib.import_module("skylit_agent_kit.watchlist")
+    """Keep the existing module-only interface for the probe and experiment."""
+    return load_kit_with_metadata(path)[0]
 
 
 def build_result(kit, fixture, selected):
