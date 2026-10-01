@@ -6,7 +6,7 @@
   "status": "experimental",
   "command": ["python3", "-X", "utf8", "-I", "-B", "run.py"],
   "inputs": ["fixture.xml"],
-  "outputs": ["reports/brief.md"],
+  "outputs": ["reports/brief.md", "reports/brief.md.run.json"],
   "access": "Python 3.11+ and the full Lab checkout. Default and saved-input modes are offline. Explicit --fetch uses one unauthenticated request to the fixed public Board feed; no credentials, Kit or model.",
   "cost": "Local compute by default. Explicit fetching adds ordinary network access with no paid API, model or trading calls.",
   "tested_hosts": [],
