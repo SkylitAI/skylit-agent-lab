@@ -11,6 +11,7 @@ with this matrix, and the experiment's `tested_hosts` stays empty.
 
 | Candidate | Version evidence | Candidate integration surface | Offline Watchlist | Live Watchlist | Auth/access |
 |---|---|---|---|---|---|
+| Codex | No Lab host-run evidence | Existing repository session with reviewed local command execution; see [agent guide](using-your-agent.md#codex-or-claude-code) | Unverified | Unverified | Unverified |
 | Claude Code | Maintainer CLI discovery: `2.1.145` | Repository skill plus reviewed command execution | Unverified | Unverified | Unverified |
 | OpenClaw | Maintainer CLI discovery: `2026.6.33 (7af0cfc)` | Workspace skill plus reviewed command execution | Unverified | Unverified | Unverified |
 | Muse Code (provisional target) | Independently repeated version/help: `1.4.2 (1.4.2-R4684.1)` | Headless `exec` and policy-gated workspace tools | Unverified | Unverified | Unverified |

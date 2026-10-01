@@ -5,6 +5,10 @@ independent reproduction. Use issues for proposals and focused PRs for changes.
 Repository access is currently limited by its INTERNAL visibility; the outside
 fork workflow will be tested when a public preview opens.
 
+Using an existing coding agent? Follow [Which agent do you use?](docs/using-your-agent.md)
+for the shared prompt, offline setup and contribution walkthrough. A terminal
+works too; no model is required to contribute a deterministic example.
+
 ## Prepare a contribution
 
 1. Read the [README](README.md), [manifest contract](docs/manifest.md) and
@@ -22,8 +26,12 @@ fork workflow will be tested when a public preview opens.
 ```sh
 python3 scripts/validate_experiments.py
 python3 -m unittest discover -s tests -v
-python3 -m compileall -q scripts tests templates/experiment
+python3 -m compileall -q scripts tests templates/experiment experiments
 ```
+
+For Kit-dependent experiments, follow [the full local check](docs/checks.md)
+with the pinned Kit checkout. Record skipped tests explicitly; a foundation CI
+pass without Kit does not verify those integrations.
 
 CI validates manifests and runs the explicitly reviewed tests/template. A new
 experiment's command is not automatically executed. Reviewers inspect code and

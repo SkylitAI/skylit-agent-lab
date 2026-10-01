@@ -11,6 +11,19 @@ installed packages to run. Agent integrations are planned; this repository does
 not yet certify any agent host or live service. Repository access is required
 while the pilot is INTERNAL.
 
+## Which agent do you use?
+
+Use the agent you already have, or run Python directly. Start with
+[the agent guide](docs/using-your-agent.md): it covers **Codex, Claude Code,
+OpenClaw and other skill-capable hosts, MCP-only hosts, standalone Python, and
+provisional Muse Code**. It includes a copyable prompt and one contribution path.
+The Python examples are tested locally; host-driven runs remain unverified.
+
+A Skylit API key is separate from your agent's subscription or model-provider
+credentials. The current Lab Watchlist is an **offline deterministic workflow**;
+[live use currently runs through Kit](docs/using-your-agent.md#use-your-skylit-key-locally).
+An API key alone does not grant access to these INTERNAL repositories.
+
 ## Run the example
 
 Requires Git and Python 3.11 or newer. On Windows, use `py -3` for Python commands.
