@@ -21,7 +21,15 @@ SKYLIT_AGENT_KIT=../skylit-agent-kit python3 -m unittest discover -s tests -p te
 ```
 
 For another local checkout, substitute its path in both `--kit` and
-`SKYLIT_AGENT_KIT`. The probe checks HEAD and rejects visible tracked/untracked
+`SKYLIT_AGENT_KIT`. On Windows, use `py -3` for Python commands and set the test
+checkout in PowerShell before running the tests:
+
+```powershell
+$env:SKYLIT_AGENT_KIT = '../skylit-agent-kit'
+py -3 -m unittest discover -s tests -p test_kit_consumer.py -v
+```
+
+The probe checks HEAD and rejects visible tracked/untracked
 changes before importing Kit. Git-ignored files are not an integrity check, and
 these checks are not a sandbox. Run only a trusted checkout. `-I` excludes user
 site packages and ambient Python import paths; `-B` avoids bytecode writes.
