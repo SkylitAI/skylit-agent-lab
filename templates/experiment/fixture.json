@@ -1,0 +1,6 @@
+{
+  "observations": [
+    {"symbol": "DEMO", "note": "Fictional source note; no market data."},
+    {"symbol": "SAMPLE", "note": null}
+  ]
+}
