@@ -6,7 +6,7 @@
   "status": "experimental",
   "command": ["python3", "-X", "utf8", "-I", "-B", "run.py", "--kit", "../../../skylit-agent-kit-watchlist"],
   "inputs": ["fixture.json"],
-  "outputs": ["reports/watchlist.md"],
+  "outputs": ["reports/watchlist.md", "reports/watchlist.md.run.json"],
   "access": "Python 3.11+ with UTF-8 text mode (-X utf8), Git, the full Lab checkout and an explicitly supplied clean local Kit checkout at the pinned revision. No account, key, model or runtime network. Obtaining an INTERNAL Kit repository requires separate repository access.",
   "cost": "Zero API credits or model usage; local compute only.",
   "tested_hosts": [],
