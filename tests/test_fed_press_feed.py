@@ -122,6 +122,21 @@ class ParserTests(unittest.TestCase):
                 self.assertEqual(result["status"], "available")
                 self.assertEqual(result["items"][0]["published_at"], f"2020-01-01T{utc_hour}:00+00:00")
 
+    def test_publication_year_is_preserved_without_modern_year_inference(self):
+        for date, expected in (("Mon, 01 Jan 0001 12:00:00 GMT", "0001-01-01T12:00:00+00:00"),
+                               ("Sun, 01 Jan 0068 12:00:00 GMT", "0068-01-01T12:00:00+00:00"),
+                               ("Sun, 01 Jan 0068 12:00:00 +0530", "0068-01-01T06:30:00+00:00")):
+            with self.subTest(date=date):
+                result = feed.parse_feed(document(item(date=date)))
+                self.assertEqual(result["status"], "available")
+                self.assertEqual(result["items"][0]["published_at"], expected)
+
+    def test_zero_year_utc_overflow_and_wrong_weekday_are_rejected(self):
+        for date in ("Wed, 01 Jan 0000 12:00:00 GMT", "Mon, 01 Jan 0001 00:00:00 +0001",
+                     "Fri, 31 Dec 9999 23:59:59 -0001", "Thu, 01 Jan 2020 12:00:00 GMT"):
+            with self.subTest(date=date):
+                self.invalid(document(item(date=date)))
+
     def test_byte_and_item_limits(self):
         raw = document(item())
         self.assertEqual(feed.parse_feed(raw.ljust(512 * 1024))["status"], "available")
@@ -153,7 +168,7 @@ class FetchTests(unittest.TestCase):
     def test_one_fixed_request_records_actual_retrieval_separately(self):
         stamp = datetime(2026, 10, 1, 22, 30, tzinfo=timezone.utc)
         self.opener.open.return_value.headers = {"Content-Length": str(len(FIXTURE))}
-        with patch.object(feed, "datetime") as clock:
+        with patch.object(feed, "datetime", wraps=datetime) as clock:
             clock.now.return_value = stamp
             result = feed.fetch_feed()
         self.assertEqual(result["status"], "available")

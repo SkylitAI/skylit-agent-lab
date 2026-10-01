@@ -1,7 +1,6 @@
 """Experimental fixed-source RSS adapter; importing and parsing never fetch data."""
 
-from datetime import datetime, timezone
-from email.utils import parsedate_to_datetime
+from datetime import datetime, timedelta, timezone
 import hashlib
 from http.client import HTTPException
 import re
@@ -15,11 +14,13 @@ SOURCE_URL = "https://www.federalreserve.gov/feeds/press_all.xml"
 MAX_BYTES = 512 * 1024
 MAX_ITEMS = 100
 SECONDS = 10
+WEEKDAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 PUBLICATION_DATE = re.compile(
-    r"(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), [0-9]{1,2} "
-    r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) [0-9]{4} "
-    r"(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9] "
-    r"(?:GMT|[+-](?:[01][0-9]|2[0-3])[0-5][0-9])"
+    rf"({'|'.join(WEEKDAYS)}), ([0-9]{{1,2}}) "
+    rf"({'|'.join(MONTHS)}) ([0-9]{{4}}) "
+    r"([01][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9]) "
+    r"(GMT|[+-](?:[01][0-9]|2[0-3])[0-5][0-9])"
 )
 
 
@@ -49,10 +50,19 @@ def _item(element):
             or any(part in {".", ".."} for part in link.split("/")[3:])):
         raise _FeedError("Item link is not a canonical Board HTTPS URL.")
     try:
-        if not PUBLICATION_DATE.fullmatch(date):
+        match = PUBLICATION_DATE.fullmatch(date)
+        if not match:
             raise ValueError
-        published = parsedate_to_datetime(date)
-        if published.tzinfo is None:
+        weekday, day, month, year, hour, minute, second, zone = match.groups()
+        zone_info = timezone.utc
+        if zone != "GMT":
+            if zone == "-0000":
+                raise ValueError
+            offset = timedelta(hours=int(zone[1:3]), minutes=int(zone[3:5]))
+            zone_info = timezone(-offset if zone[0] == "-" else offset)
+        published = datetime(int(year), MONTHS.index(month) + 1, int(day),
+                             int(hour), int(minute), int(second), tzinfo=zone_info)
+        if WEEKDAYS[published.weekday()] != weekday:
             raise ValueError
         published = published.astimezone(timezone.utc)
     except (TypeError, ValueError, OverflowError):

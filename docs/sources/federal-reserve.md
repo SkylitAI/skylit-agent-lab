@@ -47,7 +47,10 @@ Links have no credentials, port, query, fragment, encoded path or dot segments.
 The accepted date profile is `Wdy, D Mon YYYY HH:MM:SS GMT` or the same form
 with a signed four-digit `+/-HHMM` offset: English three-letter weekday/month,
 one or two day digits, four year digits, and two digits per time/offset component.
-Hours must be 00–23 and minutes/seconds 00–59; calendar dates must be valid.
+Hours must be 00–23 and minutes/seconds 00–59; calendar dates must be valid and
+the weekday must agree with the stated local date. Four-digit years 0001–9999
+are used literally, with no modern-year inference. Year 0000 and conversions
+that underflow or overflow the supported UTC date range are rejected.
 Trailing text, shortened or overflowing offsets, and the unknown `-0000` zone
 are rejected. Dates are converted to UTC without substituting a retrieval time.
 Titles retain decoded text; nested or escaped markup is rejected. DTD/entity
