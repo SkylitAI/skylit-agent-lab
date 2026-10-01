@@ -4,6 +4,7 @@ import io
 import json
 import os
 import shlex
+import runpy
 from pathlib import Path
 import subprocess
 import sys
@@ -277,3 +278,23 @@ class RealWorkspaceTests(unittest.TestCase):
             blocked = run("--output", link)
             self.assertNotEqual(blocked.returncode, 0)
             self.assertEqual(report.read_bytes(), first)
+
+
+class LauncherRoutingTests(unittest.TestCase):
+    def test_only_explicit_live_forwards_key_and_interactive_stdin(self):
+        with tempfile.TemporaryDirectory() as directory:
+            launcher = Path(directory) / "run_watchlist.py"
+            launcher.write_text(setup.LAUNCHER, encoding="utf-8")
+            for args in ([], ["--dry-run"], ["--live"]):
+                with patch.object(sys, "argv", [str(launcher), *args]), \
+                     patch.dict(os.environ, {"SKYLIT_API_KEY": "synthetic-forwarding-sentinel"}), \
+                     patch.object(subprocess, "call", return_value=0) as call:
+                    with self.assertRaises(SystemExit) as exit_result:
+                        runpy.run_path(str(launcher), run_name="__main__")
+                self.assertEqual(exit_result.exception.code, 0)
+                command = call.call_args.args[0]
+                env = call.call_args.kwargs["env"]
+                self.assertEqual("SKYLIT_API_KEY" in env, args == ["--live"])
+                self.assertNotIn("synthetic-forwarding-sentinel", " ".join(command))
+                self.assertEqual(call.call_args.kwargs["stdin"], None if args == ["--live"] else subprocess.DEVNULL)
+                self.assertEqual("watchlist_live.py" in command[5], bool(args))

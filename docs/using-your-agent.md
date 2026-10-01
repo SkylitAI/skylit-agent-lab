@@ -122,25 +122,33 @@ Model entitlement and credentials are separate from Skylit access.
 
 ## Use your Skylit key locally
 
-**Lab Watchlist has no live mode yet.** Its `run.py` accepts synthetic fixtures,
-not API keys. For supported CLI syntax today, use the existing pinned Kit
-checkout created by the Watchlist setup. Its REST live path has synthetic tests;
-authenticated end-to-end verification remains pending.
+The experiment's `run.py` remains synthetic-only. The separate
+`scripts/watchlist_live.py` entry point reuses the pinned Kit REST client and
+defaults to dry-run. It has mocked transport tests; authenticated end-to-end
+verification remains pending. It produces a report, not the experiment's offline
+run-record sidecar. It does not call an LLM or execute trades.
 
-From that **Kit root**, first inspect the free plan:
+From the **Lab root**, using your clean pinned Kit checkout, inspect the free plan:
 
 ```sh
-python3 -m skylit_agent_kit watchlist --dry-run
+python3 -X utf8 -I -B scripts/watchlist_live.py --kit ../skylit-agent-kit-watchlist --dry-run
 ```
 
 Create/manage your Skylit key in the [Developer page](https://app.skylit.ai/developer).
 When you explicitly choose a live run, this command can consume service credits:
 
 ```sh
-python3 -m skylit_agent_kit watchlist --live --max-credits 10 --max-requests 12 --max-seconds 120 --output reports/watchlist-first-live.md
+python3 -X utf8 -I -B scripts/watchlist_live.py --kit ../skylit-agent-kit-watchlist --live --symbols SPY --max-credits 3 --max-requests 5 --max-seconds 30 --output reports/watchlist-first-live.md
 ```
 
-Use your own interactive terminal: the runner asks for the key with typing hidden
+The default is one SPY plan capped at 3 documented credits, 5 requests and 30
+seconds. Larger symbol lists require a plan that fits explicitly chosen caps;
+the entry point never raises caps or retries. A stopped run returns nonzero and
+can save a partial report with the stop reason. Reports preserve attribution and
+returned source metadata, but missing data and differing source times require
+review. Raw account data and full response bodies are not saved.
+
+Use your own interactive terminal: Kit asks for the key with typing hidden
 when `SKYLIT_API_KEY` is absent. An already securely configured process environment
 is also supported; the runner does not load `.env` files automatically. A host
 without a hidden terminal prompt should direct you to your terminal rather than
@@ -150,7 +158,10 @@ The caps cover requests, documented credit reservations and elapsed checks, not 
 hard process deadline or a lock on shared account spending. A smaller account
 batch may stop the plan before paid calls. Read Kit's
 [live guide](https://github.com/SkylitAI/skylit-agent-kit/blob/0f82039759ef4db9d5b3dbd90f52863f8074f2a6/docs/live-watchlist.md)
-for limits. Use a new output name on later runs; preserve source attribution and
+for limits. Outputs must be new files inside Lab's ignored `reports/` directory;
+known invalid output paths are rejected before reading a key. A later disk or
+permission failure can still prevent saving after requests. Use a new output
+name on later runs; preserve source attribution and
 check data-sharing terms before sharing. This standalone mode needs no LLM key.
 
 ## Make a contribution
@@ -199,6 +210,6 @@ need repository access until a public preview and fork workflow are verified.
 | Tests report skips | Supply the pinned Kit as described in checks.md before claiming full runtime verification |
 
 The local helper does not obtain the repositories or install prerequisites.
-Remaining download-key-run gaps are a distributable setup path, Lab's own bounded
-live runner with run records, and authenticated service/host evidence. The examples
-above do not claim those deliverables are complete.
+Remaining download-key-run gaps are a public distributable setup path, live run
+records, and authenticated service/host evidence. The bounded live entry point
+does not establish those deliverables or make an autonomous agent.

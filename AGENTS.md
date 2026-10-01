@@ -12,7 +12,9 @@ weights, calibration or internal agent context into distributable artifacts.
 These instructions are source rules, not an operating-system sandbox.
 
 Never request credentials in chat or commit private reports. Live calls require
-the user's authorized account and budget. This foundation has no live calls.
+the user's authorized account and budget. Foundation examples remain offline;
+the separate `scripts/watchlist_live.py` path defaults to dry-run and requires
+explicit `--live` for bounded Kit requests. Tests use synthetic responses only.
 Do not install global agent configuration or change repository visibility as part
 of a template run. Do not claim a host, source or integration is verified without
 a dated result for the actual version and environment.

@@ -89,7 +89,7 @@ def validate_sources(lab, kit, destination):
     return lab, kit, destination, lab_revision, git_path
 
 
-LAUNCHER = '''"""Run this workspace's existing synthetic Watchlist; no service or model calls."""
+LAUNCHER = '''"""Run the synthetic example, or explicitly select a bounded Kit dry/live path."""
 import os
 from pathlib import Path
 import subprocess
@@ -106,7 +106,13 @@ command = [sys.executable, "-X", "utf8", "-I", "-B",
            str(root / "lab/experiments/watchlist-investigator/run.py"),
            "--output", str(root / "reports/watchlist.md"), *sys.argv[1:],
            "--kit", str(root / "kit")]
-sys.exit(subprocess.call(command, env=env, stdin=subprocess.DEVNULL))
+live = "--live" in sys.argv[1:]
+if live or "--dry-run" in sys.argv[1:]:
+    command = [sys.executable, "-X", "utf8", "-I", "-B",
+               str(root / "lab/scripts/watchlist_live.py"), *sys.argv[1:], "--kit", str(root / "kit")]
+    if live and "SKYLIT_API_KEY" in os.environ:
+        env["SKYLIT_API_KEY"] = os.environ["SKYLIT_API_KEY"]
+sys.exit(subprocess.call(command, env=env, stdin=None if live else subprocess.DEVNULL))
 '''
 
 

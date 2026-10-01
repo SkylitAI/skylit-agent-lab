@@ -20,8 +20,9 @@ provisional Muse Code**. It includes a copyable prompt and one contribution path
 The Python examples are tested locally; host-driven runs remain unverified.
 
 A Skylit API key is separate from your agent's subscription or model-provider
-credentials. The current Lab Watchlist is an **offline deterministic workflow**;
-[live use currently runs through Kit](docs/using-your-agent.md#use-your-skylit-key-locally).
+credentials. The example is an **offline deterministic workflow**. A separate
+[opt-in live entry point](docs/using-your-agent.md#use-your-skylit-key-locally)
+uses the pinned Kit client; authenticated verification remains pending.
 An API key alone does not grant access to these INTERNAL repositories.
 
 ## Run the example
