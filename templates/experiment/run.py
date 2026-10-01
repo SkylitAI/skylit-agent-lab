@@ -23,7 +23,7 @@ def render(fixture):
             raise ValueError(f"observations[{index}].symbol must be 1–16 uppercase symbol characters")
         if note is not None and not isinstance(note, str):
             raise ValueError(f"observations[{index}].note must be text or null")
-        text = " ".join(note.split()) if note else "Not provided"
+        text = (" ".join(note.split()) if note else "") or "Not provided"
         text = re.sub(r"([\\`*_{}\[\]()<>#!|])", r"\\\1", text)
         lines.append(f"- {symbol}: {text}")
     return "\n".join(lines) + "\n"
@@ -40,10 +40,10 @@ def main():
             contents = source.read(65537)
         if len(contents) > 65536:
             raise ValueError("fixture exceeds 64 KiB")
-        report = render(json.loads(contents.decode("utf-8")))
+        report = render(json.loads(contents.decode("utf-8"))).encode("utf-8")
         args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(report, encoding="utf-8")
-    except (OSError, ValueError) as error:
+        args.output.write_bytes(report)
+    except (OSError, ValueError, RecursionError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
     print(args.output.resolve())

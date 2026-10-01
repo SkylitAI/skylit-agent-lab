@@ -13,11 +13,13 @@ TEMPLATE = ROOT / "templates" / "experiment"
 
 
 class TemplateTests(unittest.TestCase):
-    def run_example(self, fixture_bytes=None):
+    def run_example(self, fixture_bytes=None, previous_report=None):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         folder = Path(directory.name)
         output = folder / "report.md"
+        if previous_report is not None:
+            output.write_text(previous_report)
         command = [sys.executable, str(TEMPLATE / "run.py"), "--output", str(output)]
         if fixture_bytes is not None:
             fixture = folder / "fixture.json"
@@ -40,14 +42,18 @@ class TemplateTests(unittest.TestCase):
         self.assertNotIn("SAMPLE", output.read_text())
 
     def test_missing_note_stays_visible(self):
-        fixture = {"observations": [{"symbol": "DEMO", "note": None}]}
-        result, output = self.run_example(json.dumps(fixture).encode())
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("DEMO: Not provided", output.read_text())
+        for note in (None, "", " \n\t "):
+            with self.subTest(note=note):
+                fixture = {"observations": [{"symbol": "DEMO", "note": note}]}
+                result, output = self.run_example(json.dumps(fixture).encode())
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("DEMO: Not provided", output.read_text())
 
     def test_invalid_inputs_fail_without_creating_output(self):
         for contents in (b"not json", b"\xff", b"[]", b'{"observations": []}',
                          b'{"observations": [{"symbol": "DEMO", "note": 3}]}',
+                         b"[" * 2000 + b"]" * 2000,
+                         b'{"observations": [{"symbol": "DEMO", "note": "\\ud800"}]}',
                          b" " * 65537):
             with self.subTest(contents=contents[:60]):
                 result, output = self.run_example(contents)
@@ -55,6 +61,12 @@ class TemplateTests(unittest.TestCase):
                 self.assertFalse(output.exists())
                 self.assertIn("error:", result.stderr)
                 self.assertNotIn("Traceback", result.stderr)
+
+    def test_invalid_encoding_preserves_existing_report(self):
+        fixture = {"observations": [{"symbol": "DEMO", "note": "\ud800"}]}
+        result, output = self.run_example(json.dumps(fixture).encode(), "Previous report.\n")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(output.read_text(), "Previous report.\n")
 
     def test_observation_text_is_not_active_markdown(self):
         fixture = {"observations": [{"symbol": "DEMO", "note": "![image](https://example.com) <b>"}]}
