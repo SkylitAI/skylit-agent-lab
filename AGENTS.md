@@ -22,7 +22,7 @@ Before a PR:
 ```sh
 python3 scripts/validate_experiments.py
 python3 -m unittest discover -s tests -v
-python3 -m compileall -q scripts tests templates/experiment
+python3 -m compileall -q scripts tests templates/experiment experiments
 ```
 
 Apply the [AI slop check](CONTRIBUTING.md#before-review), inspect the staged diff
