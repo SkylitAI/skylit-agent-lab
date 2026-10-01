@@ -1,6 +1,6 @@
-# Offline run record v1
+# Experiment run record v1
 
-A run record describes one Watchlist Python process and its local report. It
+A run record describes one experiment Python process and its local report. It
 does not measure the agent or LLM host that launched that process. A later host
 record may link the exact record-file hash and record its own usage separately.
 [Watchlist Investigator](../experiments/watchlist-investigator/README.md) writes
@@ -9,13 +9,19 @@ both artifacts; ordinary computation failures save a stopped record when the
 sidecar is writable. Early CLI/preflight errors and process termination cannot
 guarantee a record. Check the command's exit status as well as record contents.
 
-The intended shared envelope is versioned, but v1 accepts only
-`watchlist-investigator` in `offline_synthetic` mode. Market Brief, Journal,
-providers and live modes need their own reviewed parameter contracts later.
+The v1 envelope has explicit profiles for `watchlist-investigator`,
+`journal-reviewer` and `market-brief`. Watchlist's existing profile is unchanged.
+The Journal/Market additions below validate record shapes; this contract increment
+alone does not establish their runner emission or persistence integration. No
+model provider or authenticated trading-service profile is accepted.
 
 All keys below are required; unknown keys are rejected at every object level.
 `null` means unavailable, not zero or an empty collection. SHA values use lowercase
 hex: 40 characters for Git revisions, 64 for exact-byte SHA-256 digests.
+
+The following table describes the common envelope and existing **Watchlist**
+profile. Journal/Market substitutions are specified below; fields from another
+profile are rejected.
 
 | Group | Exact fields and meaning |
 |---|---|
@@ -71,6 +77,109 @@ decoder or schema pass alone does not prove those observations or file writes;
 the workflow tests exercise actual successful and stopped commands separately.
 
 Run the contract tests without Kit: `python3 -m unittest discover -s tests -p test_run_records.py -v`.
+
+## Journal and Market profiles
+
+Both new profiles require `kit: null`: neither experiment consumes Kit. They
+retain the exact root keys, Lab observation, actual UTC execution timestamps,
+private report output shape and bounded decoder. `parameters` and `source_time`
+may be null before their validation/parsing stages. Completed records require
+both, complete input/report hashes, a finish timestamp and known usage. The
+validator checks assertions and correlations, not whether observations are true.
+
+| Field | Journal Reviewer | Market Brief |
+|---|---|---|
+| `experiment_id` | `journal-reviewer` | `market-brief` |
+| `mode` | `offline_synthetic` or `offline_supplied` | Either offline mode, or `public_fetch` |
+| `inputs[0].role` | `journal_csv` | `fed_press_xml` |
+| Validated `parameters` | Exactly `{}`; input paths are excluded | Exactly `{"limit": N}`, integer 1–20 |
+| `source_time` | Aggregate supplied trade times below | Feed status, retrieval and selected publication times below |
+
+Input entries still have exactly `role`, `sha256`, `hash_state`. `complete`
+requires the exact whole consumed-buffer hash, including malformed complete CSV
+or XML. `not_read`, `read_failed` and `too_large` require a null hash; an oversized
+prefix never establishes a complete hash. `read_failed` includes an incomplete
+or failed public fetch. Only the reviewed bundled synthetic route selects
+`offline_synthetic`; custom local input is `offline_supplied`, not independently
+verified provenance. Neither a matching shape nor the fixed feed identity
+turns caller-supplied XML into an authenticated official response.
+
+Journal `source_time` has exactly these keys:
+
+```json
+{"basis":"supplied_trade_times","trade_count":0,"first_entry_at":null,"last_exit_at":null}
+```
+
+`trade_count` is an integer 0–1000. For nonempty input, `first_entry_at` is the
+minimum normalized entry time and `last_exit_at` the maximum normalized exit
+time across parsed rows; both must be aware UTC, with first at or before last.
+Zero trades requires both endpoints null. Empty input can complete without
+inventing a trading result. The validator checks count/order/shape, not the
+min/max computation. It accepts no symbols, per-trade times, notes or financial
+values in this aggregate. **Even these aggregate times and count are private**:
+keep them in the private local sidecar and omit them from shared/public
+reproduction evidence. Source times remain supplied data, not execution times
+or independently verified fills.
+
+Market `source_time` has exactly `status`, `retrieved_at`, `published_at`.
+Status is `available`, `empty`, `invalid` or `unavailable`. `published_at` is an
+ordered list of normalized UTC publication times for the selected report items,
+not titles or release URLs; its length cannot exceed `parameters.limit`.
+`available` requires a nonempty list; the other statuses require `[]`.
+
+The fixed Board feed URL is implicit in the Market experiment, not a configurable
+record field. Offline records always have null `retrieved_at`. A fully received
+public fetch, including an invalid XML body, requires an actual aware UTC
+retrieval timestamp and a complete input hash. `unavailable` is a public-fetch
+state only, requires null retrieval time and a `read_failed` or `too_large` input
+with no hash. It cannot expose partial items. Parsing a saved file does not
+create a new retrieval event. Source publication times do not establish freshness.
+
+Usage retains `scope: python_process`, `observed_billing: null` and
+`model: {"mode":"none","provider":null,"tokens":null}`. Offline profiles use
+`known_offline_path` and integer zero requests/reservations. Only Market
+`public_fetch` accepts `known_public_fetch`: actual attempts are integer 0–1 and
+credit reservations zero. Before a request, zero is valid; once a feed result
+exists, exactly one attempt and known usage are required, including invalid or
+unavailable results. `unknown` usage retains null request/reservation counts.
+No host usage or observed billing is inferred from these workflow values.
+
+Limits have exact keys and constant values for each new profile:
+
+```json
+{"input_bytes":1048576,"rows":1000,"requests":0,"credits":0,"model_calls":0,"output_no_overwrite":true}
+```
+
+Market uses `input_bytes: 524288`, `items: 100`, `display_items: 20`,
+`credits: 0`, `model_calls: 0`,
+`output_no_overwrite: true`, plus `requests: 0, fetch_timeout_seconds: null` for
+offline modes or `requests: 1, fetch_timeout_seconds: 10` for public fetching.
+The fetch timeout describes the configured socket/between-read budget, not a
+hard DNS/process deadline. The display limit does not change the 100-item feed cap.
+
+New-profile stopped reasons share `invalid_parameters`, `input_unreadable`,
+`input_too_large`, `encoding_unsupported`, `output_path_unprintable`,
+`output_exists`, `output_write_failed`, `record_write_failed`, `interrupted`,
+`fixture_changed`. Journal additionally accepts `invalid_journal`; Market accepts `invalid_feed`
+and `source_unavailable`. Watchlist's Kit/fixture reasons are not accepted here.
+`fixture_changed` is only for the bundled `offline_synthetic` route: the whole
+input hash must be known, parameters validated, source_time null and report
+`not_written`. It records a changed bundled-fixture hash, even when the bytes
+would otherwise parse. It cannot be used for supplied/fetched input or a complete
+report. The caller must compare against the known reviewed fixture digest; the
+schema does not infer the expected digest or certify fictional provenance.
+Input errors require the matching hash state and no source-time assessment;
+`invalid_parameters` also requires null parameters. `invalid_journal` retains a
+complete hash but no aggregate. Feed-error reasons require their matching feed
+status. Raw exceptions, source error text and arbitrary reason variants are rejected.
+
+Market completes only for `available` or `empty`; a valid empty feed is not an
+invalid/unavailable feed. An invalid or unavailable feed may have a fully saved
+gap report: `outputs.state: complete` and its exact hash coexist with
+`outcome.status: stopped`. The command still exits nonzero. Output completeness
+is separate from workflow success. These shapes permit byte-written reports,
+but safe byte hashing and preserving gap outcomes require the separate
+persistence extension before runner integration.
 
 ## Private local persistence helper
 
