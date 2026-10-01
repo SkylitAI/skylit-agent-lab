@@ -137,5 +137,162 @@ class DecodeTests(unittest.TestCase):
                 self.assertNotIn(content[:20].decode("utf-8", errors="replace"), str(error.exception))
 
 
+def seed_record(experiment="journal-reviewer", mode="offline_synthetic"):
+    record = sample_record()
+    record.update(experiment_id=experiment, mode=mode, kit=None)
+    record["inputs"][0]["role"] = "journal_csv" if experiment == "journal-reviewer" else "fed_press_xml"
+    if experiment == "journal-reviewer":
+        record["parameters"] = {}
+        record["source_time"] = {"basis": "supplied_trade_times", "trade_count": 2,
+                                 "first_entry_at": "2026-10-01T13:30:00Z", "last_exit_at": "2026-10-01T15:00:00Z"}
+        record["limits"] = {"input_bytes": 1048576, "rows": 1000, "requests": 0, "credits": 0,
+                            "model_calls": 0, "output_no_overwrite": True}
+    else:
+        fetched = mode == "public_fetch"
+        record["parameters"] = {"limit": 10}
+        record["source_time"] = {"status": "available", "retrieved_at": "2026-10-01T15:00:00Z" if fetched else None,
+                                 "published_at": ["2026-10-01T14:00:00Z"]}
+        record["limits"] = {"input_bytes": 524288, "items": 100, "display_items": 20, "requests": 1 if fetched else 0,
+                            "credits": 0, "model_calls": 0, "fetch_timeout_seconds": 10 if fetched else None,
+                            "output_no_overwrite": True}
+        if fetched:
+            record["usage"].update(basis="known_public_fetch", requests_attempted=1)
+    return record
+
+
+class SeedContractTests(unittest.TestCase):
+    def test_journal_modes_and_empty_aggregate(self):
+        for mode in ("offline_synthetic", "offline_supplied"):
+            record = seed_record(mode=mode)
+            self.assertEqual(records.parse_record(json.dumps(record).encode()), record)
+            record["source_time"].update(trade_count=0, first_entry_at=None, last_exit_at=None)
+            self.assertEqual(records.validate_record(record), record)
+
+    def test_journal_aggregate_rejects_private_rows_and_inconsistent_bounds(self):
+        for key, value in (("trade_count", True), ("trade_count", -1), ("trade_count", 1001),
+                           ("trade_count", 0), ("first_entry_at", None),
+                           ("first_entry_at", "2026-10-01T15:00:01Z"),
+                           ("last_exit_at", "2026-10-01T15:00:00+01:00"), ("basis", "verified_times")):
+            with self.subTest(key=key, value=value):
+                record = seed_record()
+                record["source_time"][key] = value
+                with self.assertRaises(records.RecordError): records.validate_record(record)
+        for key in ("symbols", "trades", "notes", "total_net"):
+            record = seed_record()
+            record["source_time"][key] = "private-marker"
+            with self.assertRaises(records.RecordError) as caught: records.validate_record(record)
+            self.assertNotIn("private-marker", str(caught.exception))
+
+    def test_market_modes_available_and_empty(self):
+        for mode in ("offline_synthetic", "offline_supplied", "public_fetch"):
+            record = seed_record("market-brief", mode)
+            self.assertEqual(records.parse_record(json.dumps(record).encode()), record)
+            record["parameters"]["limit"] = 20
+            record["source_time"]["published_at"] *= 20
+            self.assertEqual(records.validate_record(record), record)
+            record["source_time"].update(status="empty", published_at=[])
+            self.assertEqual(records.validate_record(record), record)
+
+    def test_market_invalid_complete_body_can_have_a_complete_gap_report(self):
+        for mode in ("offline_supplied", "public_fetch"):
+            record = seed_record("market-brief", mode)
+            record["source_time"].update(status="invalid", published_at=[])
+            record["outcome"] = {"status": "stopped", "reason": "invalid_feed"}
+            self.assertEqual(records.validate_record(record), record)
+            record["outcome"] = {"status": "completed", "reason": "completed"}
+            with self.assertRaises(records.RecordError): records.validate_record(record)
+
+    def test_market_incomplete_fetch_has_no_input_hash_or_retrieval_time(self):
+        record = seed_record("market-brief", "public_fetch")
+        record["source_time"].update(status="unavailable", retrieved_at=None, published_at=[])
+        record["inputs"][0].update(hash_state="read_failed", sha256=None)
+        record["outcome"] = {"status": "stopped", "reason": "source_unavailable"}
+        self.assertEqual(records.validate_record(record), record)
+        for key, value in (("retrieved_at", "2026-10-01T15:00:00Z"), ("published_at", ["2026-10-01T14:00:00Z"])):
+            bad = json.loads(json.dumps(record)); bad["source_time"][key] = value
+            with self.assertRaises(records.RecordError): records.validate_record(bad)
+        record["inputs"][0].update(hash_state="complete", sha256="c" * 64)
+        with self.assertRaises(records.RecordError): records.validate_record(record)
+
+    def test_market_rejects_false_provenance_counts_limits_and_time_states(self):
+        cases = [(("source_time", "retrieved_at"), None), (("usage", "requests_attempted"), 0),
+                 (("usage", "requests_attempted"), 2), (("usage", "credits_reserved"), 1),
+                 (("usage", "basis"), "known_offline_path"), (("source_time", "published_at"), []),
+                 (("source_time", "published_at"), ["2026-10-01T14:00:00Z"] * 11),
+                 (("source_time", "published_at"), ["2026-10-01T14:00:00+01:00"]),
+                 (("parameters", "limit"), 0), (("parameters", "limit"), 21), (("parameters", "limit"), 101),
+                 (("parameters", "limit"), True), (("limits", "fetch_timeout_seconds"), 30)]
+        for path, value in cases:
+            record = seed_record("market-brief", "public_fetch"); record[path[0]][path[1]] = value
+            with self.subTest(path=path, value=value):
+                with self.assertRaises(records.RecordError): records.validate_record(record)
+        record = seed_record("market-brief", "offline_supplied")
+        record["source_time"]["retrieved_at"] = "2026-10-01T15:00:00Z"
+        with self.assertRaises(records.RecordError): records.validate_record(record)
+
+    def test_new_profiles_allow_pre_read_stops_and_complete_malformed_hashes(self):
+        for experiment in ("journal-reviewer", "market-brief"):
+            for reason, state in (("invalid_parameters", "not_read"), ("input_unreadable", "read_failed"),
+                                  ("input_too_large", "too_large")):
+                record = seed_record(experiment)
+                record.update(parameters=None, source_time=None, outcome={"status": "stopped", "reason": reason})
+                record["inputs"][0].update(hash_state=state, sha256=None)
+                record["outputs"][0].update(state="not_written", sha256=None)
+                self.assertEqual(records.validate_record(record), record)
+        record = seed_record()
+        record.update(source_time=None, outcome={"status": "stopped", "reason": "invalid_journal"})
+        record["outputs"][0].update(state="not_written", sha256=None)
+        self.assertEqual(records.validate_record(record), record)
+        record["inputs"][0].update(hash_state="read_failed", sha256=None)
+        with self.assertRaises(records.RecordError): records.validate_record(record)
+
+    def test_changed_bundled_fixture_is_a_stopped_provenance_failure(self):
+        for experiment in ("journal-reviewer", "market-brief"):
+            record = seed_record(experiment)
+            record.update(source_time=None, outcome={"status": "stopped", "reason": "fixture_changed"})
+            record["outputs"][0].update(state="not_written", sha256=None)
+            self.assertEqual(records.validate_record(record), record)
+            for mode in ("offline_supplied", "public_fetch"):
+                bad = seed_record(experiment, mode)
+                bad.update(source_time=None, outcome={"status": "stopped", "reason": "fixture_changed"})
+                bad["outputs"][0].update(state="not_written", sha256=None)
+                with self.assertRaises(records.RecordError): records.validate_record(bad)
+            for group, key, value in (("inputs", "hash_state", "not_read"), ("outputs", "state", "complete")):
+                bad = json.loads(json.dumps(record)); bad[group][0][key] = value
+                bad[group][0]["sha256"] = "d" * 64 if value == "complete" else None
+                with self.assertRaises(records.RecordError): records.validate_record(bad)
+            for key, value in (("parameters", None), ("source_time", seed_record(experiment)["source_time"]),
+                               ("outcome", {"status": "completed", "reason": "fixture_changed"})):
+                bad = json.loads(json.dumps(record)); bad[key] = value
+                with self.assertRaises(records.RecordError): records.validate_record(bad)
+        record = sample_record(); record["outcome"] = {"status": "stopped", "reason": "fixture_changed"}
+        with self.assertRaises(records.RecordError): records.validate_record(record)
+
+    def test_cross_profile_fields_and_reasons_are_rejected(self):
+        for experiment in ("journal-reviewer", "market-brief"):
+            for key, value in (("kit", sample_record()["kit"]), ("source_time", sample_record()["source_time"]),
+                               ("parameters", sample_record()["parameters"]), ("limits", sample_record()["limits"])):
+                record = seed_record(experiment); record[key] = value
+                with self.subTest(experiment=experiment, key=key):
+                    with self.assertRaises(records.RecordError): records.validate_record(record)
+            record = seed_record(experiment)
+            record["outcome"] = {"status": "stopped", "reason": "kit_unavailable"}
+            with self.assertRaises(records.RecordError): records.validate_record(record)
+        record = seed_record(); record["mode"] = "public_fetch"
+        with self.assertRaises(records.RecordError): records.validate_record(record)
+        record = sample_record(); record["kit"] = None
+        with self.assertRaises(records.RecordError): records.validate_record(record)
+
+    def test_unknown_keys_and_nonboolean_model_or_limit_values_are_rejected(self):
+        for experiment in ("journal-reviewer", "market-brief"):
+            for group in ("parameters", "source_time", "limits"):
+                record = seed_record(experiment); record[group]["extra"] = "private-marker"
+                with self.assertRaises(records.RecordError): records.validate_record(record)
+            record = seed_record(experiment); record["limits"]["output_no_overwrite"] = 1
+            with self.assertRaises(records.RecordError): records.validate_record(record)
+            record = seed_record(experiment); record["usage"]["model"]["tokens"] = 0
+            with self.assertRaises(records.RecordError): records.validate_record(record)
+
+
 if __name__ == "__main__":
     unittest.main()
