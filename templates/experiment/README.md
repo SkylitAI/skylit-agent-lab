@@ -13,12 +13,14 @@ python3 run.py
 The printed path is `reports/example.md`; compare it with `expected.md`.
 Edit a note or symbol in `fixture.json` and rerun. A `null` note stays visible as
 `Not provided`. Notes are treated as text, not Markdown or instructions. You can
-also pass `--fixture PATH` and `--output PATH`; the output file is replaced.
+also pass `--fixture PATH` and `--output PATH`. Relative custom paths are resolved
+from your current directory. An existing output report is replaced; an output
+that points to the input fixture is rejected so it cannot destroy that input.
 
-To contribute, copy this directory under `experiments/<your-id>/`, update the
-manifest ID and owner, and describe your own example. Remove generated reports
-from the copied directory before sharing; they are ignored by Git. The manifest's
-command runs from the experiment directory. Its paths are relative to that same
+To contribute, use the [repository copy command](../../README.md#contribute-an-experiment)
+to create `experiments/<your-id>/` without generated reports or bytecode, update
+the manifest ID and owner, and describe your own example. Reports are ignored by
+Git. The manifest's command runs from the experiment directory. Its paths are relative to that same
 directory, even when validation runs from the repository root.
 
 ## Sources and limits
