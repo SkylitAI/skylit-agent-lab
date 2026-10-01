@@ -3,8 +3,8 @@
 A run record describes one Watchlist Python process and its local report. It
 does not measure the agent or LLM host that launched that process. A later host
 record may link the exact record-file hash and record its own usage separately.
-This increment defines the contract and bounded JSON decoder; strict record
-validation follows separately. No workflow currently produces these records.
+This increment implements the contract, bounded JSON decoder and strict record
+validator. No workflow currently produces these records.
 
 The intended shared envelope is versioned, but v1 accepts only
 `watchlist-investigator` in `offline_synthetic` mode. Market Brief, Journal,
@@ -30,7 +30,8 @@ hex: 40 characters for Git revisions, 64 for exact-byte SHA-256 digests.
 | `limits` | Actual offline limits: `fixture_bytes: 65536`, `symbols: 100`, `requests: 0`, `credits: 0`, `model_calls: 0`, `output_no_overwrite: true`. These describe the workflow's enforced path, not OS isolation. |
 
 `completed` requires reason `completed`, validated parameters and source-time
-assessment, verified Kit, complete input/report hashes, and a known finish time.
+assessment, verified Kit, complete input/report hashes, a known finish time and
+usage based on the known offline path.
 It does not require a clean Lab checkout. A report filename contains no directory
 separator, colon or control character and cannot be `.` or `..`. The record
 does not hash itself; no absolute paths, environment values, raw payloads, CLI
@@ -55,9 +56,14 @@ not the truth of observations or correctness of T09's arithmetic.
 
 JSON must be UTF-8, at most **262144 bytes**, without duplicate keys, nonfinite
 numbers, more than 32 container levels or booleans masquerading as numeric counts.
-`decode_record(content)` accepts bounded bytes and returns an inert JSON object.
+`parse_record(content)` accepts bounded bytes and returns a validated inert record.
+`decode_record(content)` only decodes bounded JSON; `validate_record(record)`
+checks an already decoded object. Both validation entry points return the object
+without modifying it. The bytes entry point enforces the size/nesting limits.
 It never reads Git, other files, environment variables or network state, and
 never executes record content. Invalid data raises `RecordError` with fixed
 diagnostics that do not echo submitted content. Workflow integration, hashing
 the actual consumed input buffer and exclusive private output persistence are
 separate increments; a decoder or schema pass proves none of those behaviors.
+
+Run the contract tests without Kit: `python3 -m unittest discover -s tests -p test_run_records.py -v`.
