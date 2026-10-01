@@ -8,6 +8,8 @@ import sys
 import tempfile
 import unittest
 
+from scripts import probe_kit_watchlist as consumer
+
 
 ROOT = Path(__file__).resolve().parents[1]
 KIT = Path(os.environ.get("SKYLIT_AGENT_KIT", ROOT.parent / "skylit-agent-kit"))
@@ -54,6 +56,7 @@ class KitConsumerTests(unittest.TestCase):
         self.assertIn("missing from heatmap response", result.stdout)
         self.assertIn("missing from synthetic fixture", result.stdout)
         self.assertIn("0 requests attempted; 0 documented credits", result.stdout)
+        self.assertEqual(result.stdout, (ROOT / "examples" / "kit-watchlist.expected.md").read_text())
 
     @unittest.skipUnless(KIT.is_dir(), "Set SKYLIT_AGENT_KIT to the pinned local checkout")
     def test_selected_symbols_are_normalized_deduplicated_and_not_substituted(self):
@@ -99,6 +102,54 @@ class KitConsumerTests(unittest.TestCase):
                     self.assertEqual(result.stdout, "")
                     self.assertIn("error:", result.stderr)
                     self.assertNotIn("Traceback", result.stderr)
+
+    @unittest.skipUnless(KIT.is_dir(), "Set SKYLIT_AGENT_KIT to the pinned local checkout")
+    def test_dirty_checkout_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            checkout = Path(directory) / "kit"
+            subprocess.run(
+                ["git", "clone", "--local", "--no-hardlinks", "--quiet", str(KIT.resolve()), str(checkout)],
+                check=True, capture_output=True, env={"PATH": os.defpath},
+            )
+            (checkout / "README.md").write_text("A local change.\n")
+            result = self.run_probe(kit=checkout)
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stdout, "")
+        self.assertIn("Kit checkout must be clean", result.stderr)
+
+
+class FixtureInputTests(unittest.TestCase):
+    def test_fixture_read_has_an_inclusive_64_kib_limit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "fixture.json"
+            path.write_bytes(b"{}" + b" " * (65536 - 2))
+            self.assertEqual(consumer.load_fixture(path), {})
+            path.write_bytes(path.read_bytes() + b" ")
+            with self.assertRaisesRegex(ValueError, "64 KiB"):
+                consumer.load_fixture(path)
+
+    def test_bad_files_have_actionable_fixture_errors(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "fixture.json"
+            for contents in (b"not json", b"\xff", b"[" * 2000 + b"]" * 1999):
+                with self.subTest(contents=contents[:20]):
+                    path.write_bytes(contents)
+                    with self.assertRaisesRegex(ValueError, "Fixture must contain valid UTF-8 JSON"):
+                        consumer.load_fixture(path)
+            with self.assertRaisesRegex(ValueError, "readable regular JSON file"):
+                consumer.load_fixture(Path(directory))
+            with self.assertRaisesRegex(ValueError, "readable regular JSON file"):
+                consumer.load_fixture(Path(directory) / "missing.json")
+
+    @unittest.skipUnless(KIT.is_dir(), "Set SKYLIT_AGENT_KIT to the pinned local checkout")
+    def test_reused_renderer_names_the_experiment_and_keeps_fictional_label(self):
+        kit = consumer.load_kit(KIT)
+        report = consumer.render_fixture(
+            kit, json.loads(FIXTURE.read_text()), "SPY", title="Watchlist Investigator",
+        )
+        self.assertTrue(report.startswith("# Watchlist Investigator\n"))
+        self.assertIn("**Fictional data only.**", report)
+        self.assertNotIn("consumer probe", report)
 
 
 if __name__ == "__main__":
