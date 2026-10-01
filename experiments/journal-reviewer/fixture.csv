@@ -1,0 +1,3 @@
+symbol,asset_type,currency,side,quantity,entry_price,exit_price,fees,entry_time,exit_time,notes
+LABA,cash_equity,USD,long,2.5,10.125,11.25,0.10,2026-10-01T09:30:00-04:00,2026-10-01T14:00:00Z,Fictional long paper trade.
+LABB,cash_equity,USD,short,3,25,24.25,0.20,2026-10-01T14:15:00Z,2026-10-01T16:00:00+01:00,Fictional short paper trade.
