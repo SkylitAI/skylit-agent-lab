@@ -17,9 +17,9 @@ and explicit budgets; no live functionality is part of the foundation.
 
 ## What validation establishes
 
-Manifest validation is planned in the next foundation increment. It will check
-metadata and package paths without executing commands. Neither metadata nor this
-source policy proves that code is safe; neither is a sandbox. Files can change after validation; reviewers
+The manifest checker reads bounded JSON and checks metadata and package paths. It
+does not execute the command field, fetch sources, verify owner identity or prove
+that code is safe. It is not a sandbox. Files can change after validation; reviewers
 must use the reviewed revision and an appropriate execution environment.
 
 GitHub CI uses hosted runners, minimal token permissions and no production secrets.
