@@ -1,0 +1,337 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "watchlist-default",
+      "scope": "lab_workflow",
+      "experiment": "watchlist-investigator",
+      "input": "watchlist-bundled",
+      "expected": {
+        "exit_code": 0,
+        "mode": "offline_synthetic",
+        "outcome": {"status": "completed", "reason": "completed"},
+        "input_hash_state": "complete",
+        "output_state": "complete",
+        "parameters": {
+          "symbols": ["SPY", "QQQ"],
+          "reference_time": "2026-10-01T14:01:00+00:00",
+          "max_age_seconds": 900
+        },
+        "source_time": {
+          "reference_time": "2026-10-01T14:01:00+00:00",
+          "max_age_seconds": 900,
+          "symbols": ["SPY", "QQQ"],
+          "rows": {
+            "SPY": {
+              "gamma.as_of": {"timestamp": "2026-10-01T13:55:00+00:00", "age_seconds": 360, "status": "within threshold", "reason": null},
+              "vanna.as_of": {"timestamp": "2026-10-01T13:54:00+00:00", "age_seconds": 420, "status": "within threshold", "reason": null},
+              "flow.generated_at": {"timestamp": "2026-10-01T13:56:00+00:00", "age_seconds": 300, "status": "within threshold", "reason": null},
+              "flow.latest_trade": {"timestamp": "2026-10-01T13:55:30+00:00", "age_seconds": 330, "status": "within threshold", "reason": null}
+            },
+            "QQQ": {
+              "gamma.as_of": {"timestamp": null, "age_seconds": null, "status": "unavailable", "reason": "timestamp missing or invalid; missing from heatmap response"},
+              "vanna.as_of": {"timestamp": null, "age_seconds": null, "status": "unavailable", "reason": "timestamp missing or invalid; missing from heatmap response"},
+              "flow.generated_at": {"timestamp": null, "age_seconds": null, "status": "unavailable", "reason": "timestamp missing or invalid; missing from synthetic fixture"},
+              "flow.latest_trade": {"timestamp": null, "age_seconds": null, "status": "unavailable", "reason": "timestamp missing or invalid; missing from synthetic fixture"}
+            }
+          },
+          "spans": {
+            "SPY": {"seconds": 120, "valid_fields": 4},
+            "QQQ": {"seconds": null, "valid_fields": 0}
+          }
+        },
+        "golden": "watchlist-default",
+        "contains": [],
+        "absent": [],
+        "stderr_absent": ["Traceback"]
+      }
+    },
+    {
+      "id": "watchlist-changed-evidence",
+      "scope": "lab_workflow",
+      "experiment": "watchlist-investigator",
+      "input": "watchlist-changed-evidence",
+      "expected": {
+        "exit_code": 0,
+        "mode": "offline_synthetic",
+        "outcome": {"status": "completed", "reason": "completed"},
+        "input_hash_state": "complete",
+        "output_state": "complete",
+        "parameters": {
+          "symbols": ["SPY", "QQQ", "SPXW"],
+          "reference_time": "2026-10-01T14:01:00+00:00",
+          "max_age_seconds": 900
+        },
+        "source_time": {
+          "reference_time": "2026-10-01T14:01:00+00:00",
+          "max_age_seconds": 900,
+          "symbols": ["SPY", "QQQ", "SPXW"],
+          "rows": {
+            "SPY": {
+              "gamma.as_of": {"timestamp": "2026-10-01T13:44:00+00:00", "age_seconds": 1020, "status": "stale", "reason": null},
+              "vanna.as_of": {"timestamp": "2026-10-01T14:02:00+00:00", "age_seconds": -60, "status": "future", "reason": null},
+              "flow.generated_at": {"timestamp": "2026-10-01T13:56:00+00:00", "age_seconds": 300, "status": "within threshold", "reason": null},
+              "flow.latest_trade": {"timestamp": null, "age_seconds": null, "status": "unavailable", "reason": "timestamp missing or invalid; partial: 1 invalid trades"}
+            },
+            "QQQ": {
+              "gamma.as_of": {"timestamp": null, "age_seconds": null, "status": "unavailable", "reason": "timestamp missing or invalid; missing from heatmap response"},
+              "vanna.as_of": {"timestamp": null, "age_seconds": null, "status": "unavailable", "reason": "timestamp missing or invalid; missing from heatmap response"},
+              "flow.generated_at": {"timestamp": null, "age_seconds": null, "status": "unavailable", "reason": "timestamp missing or invalid; missing from synthetic fixture"},
+              "flow.latest_trade": {"timestamp": null, "age_seconds": null, "status": "unavailable", "reason": "timestamp missing or invalid; missing from synthetic fixture"}
+            },
+            "SPXW": {
+              "gamma.as_of": {"timestamp": null, "age_seconds": null, "status": "unavailable", "reason": "timestamp missing or invalid; missing from heatmap response"},
+              "vanna.as_of": {"timestamp": null, "age_seconds": null, "status": "unavailable", "reason": "timestamp missing or invalid; missing from heatmap response"},
+              "flow.generated_at": {"timestamp": null, "age_seconds": null, "status": "unavailable", "reason": "timestamp missing or invalid; missing from synthetic fixture"},
+              "flow.latest_trade": {"timestamp": null, "age_seconds": null, "status": "unavailable", "reason": "timestamp missing or invalid; missing from synthetic fixture"}
+            }
+          },
+          "spans": {
+            "SPY": {"seconds": 1080, "valid_fields": 3},
+            "QQQ": {"seconds": null, "valid_fields": 0},
+            "SPXW": {"seconds": null, "valid_fields": 0}
+          }
+        },
+        "golden": null,
+        "contains": [
+          "source king: 110 / -199",
+          "largest returned magnitude: 115 / 60",
+          "## SPXW\n",
+          "| SPY | gamma.as_of | 2026-10-01T13:44:00+00:00 | 1020 | stale |",
+          "| SPY | vanna.as_of | 2026-10-01T14:02:00+00:00 | -60 | future |",
+          "| SPY | flow.latest_trade | unavailable | unavailable | timestamp missing or invalid; partial: 1 invalid trades |",
+          "- SPY: observed timestamp span 1080 seconds across 3 valid fields.",
+          "| QQQ | missing from heatmap response | missing from heatmap response | missing from synthetic fixture |",
+          "| SPXW | missing from heatmap response | missing from heatmap response | missing from synthetic fixture |",
+          "| QQQ | gamma.as_of | unavailable | unavailable | timestamp missing or invalid; missing from heatmap response |",
+          "| QQQ | vanna.as_of | unavailable | unavailable | timestamp missing or invalid; missing from heatmap response |",
+          "| QQQ | flow.generated_at | unavailable | unavailable | timestamp missing or invalid; missing from synthetic fixture |",
+          "| QQQ | flow.latest_trade | unavailable | unavailable | timestamp missing or invalid; missing from synthetic fixture |",
+          "- QQQ: observed timestamp span unavailable (0 valid fields; need at least 2).",
+          "| SPXW | gamma.as_of | unavailable | unavailable | timestamp missing or invalid; missing from heatmap response |",
+          "| SPXW | vanna.as_of | unavailable | unavailable | timestamp missing or invalid; missing from heatmap response |",
+          "| SPXW | flow.generated_at | unavailable | unavailable | timestamp missing or invalid; missing from synthetic fixture |",
+          "| SPXW | flow.latest_trade | unavailable | unavailable | timestamp missing or invalid; missing from synthetic fixture |",
+          "- SPXW: observed timestamp span unavailable (0 valid fields; need at least 2)."
+        ],
+        "absent": ["source king: 110 / -180", "## SPX\n", "0 trades; $0"],
+        "stderr_absent": ["Traceback"]
+      }
+    },
+    {
+      "id": "watchlist-invalid",
+      "scope": "lab_workflow",
+      "experiment": "watchlist-investigator",
+      "input": "invalid-json",
+      "expected": {
+        "exit_code": 1,
+        "mode": "offline_synthetic",
+        "outcome": {"status": "stopped", "reason": "invalid_fixture"},
+        "input_hash_state": "complete",
+        "output_state": "not_written",
+        "parameters": {
+          "symbols": ["SPY", "QQQ"],
+          "reference_time": "2026-10-01T14:01:00+00:00",
+          "max_age_seconds": 900
+        },
+        "source_time": null,
+        "golden": null,
+        "contains": [],
+        "absent": [],
+        "stderr_absent": ["Traceback"]
+      }
+    },
+    {
+      "id": "kit-budget-stop",
+      "scope": "kit_dependency",
+      "experiment": "watchlist-investigator",
+      "input": "kit-budget-fixtures",
+      "expected": {"exit_code": 0, "tests_run": 1, "failed_tests": 0, "simulated_stop_contains": "budget", "simulated_credits": 0, "lab_record": false}
+    },
+    {
+      "id": "journal-default",
+      "scope": "lab_workflow",
+      "experiment": "journal-reviewer",
+      "input": "journal-bundled",
+      "expected": {
+        "exit_code": 0,
+        "mode": "offline_synthetic",
+        "outcome": {"status": "completed", "reason": "completed"},
+        "input_hash_state": "complete",
+        "output_state": "complete",
+        "parameters": {},
+        "source_time": {"basis": "supplied_trade_times", "trade_count": 2, "first_entry_at": "2026-10-01T13:30:00+00:00", "last_exit_at": "2026-10-01T15:00:00+00:00"},
+        "golden": "journal-default",
+        "contains": [],
+        "absent": [],
+        "stderr_absent": ["Traceback"]
+      }
+    },
+    {
+      "id": "journal-fees-gap",
+      "scope": "lab_workflow",
+      "experiment": "journal-reviewer",
+      "input": "journal-fees-gap",
+      "expected": {
+        "exit_code": 0,
+        "mode": "offline_supplied",
+        "outcome": {"status": "completed", "reason": "completed"},
+        "input_hash_state": "complete",
+        "output_state": "complete",
+        "parameters": {},
+        "source_time": {"basis": "supplied_trade_times", "trade_count": 2, "first_entry_at": "2026-10-01T13:30:00+00:00", "last_exit_at": "2026-10-01T15:00:00+00:00"},
+        "golden": null,
+        "contains": [
+          "Total net (USD): 3.76",
+          "- Entered fees (USD): 1.10",
+          "- Net (USD): 1.71",
+          "Supplied note: unavailable; no reason supplied.",
+          "Source: supplied paper-trade input.",
+          "## Trade 1: LABA (long)\n\n- Asset type: cash_equity; currency: USD.\n- Quantity (shares): 2.5\n- Entry price (USD/share): 10.125; time (UTC): 2026-10-01T13:30:00+00:00\n- Exit price (USD/share): 11.25; time (UTC): 2026-10-01T14:00:00+00:00\n- Entered fees (USD): 1.10\n- Gross (USD): 2.81\n- Net (USD): 1.71\n\nSupplied note: unavailable; no reason supplied.\n\n## Trade 2: LABB (short)\n"
+        ],
+        "absent": ["Total net (USD): 4.76", "Source: caller-declared fictional fixture."],
+        "stderr_absent": ["Traceback"]
+      }
+    },
+    {
+      "id": "journal-empty",
+      "scope": "lab_workflow",
+      "experiment": "journal-reviewer",
+      "input": "journal-header-only",
+      "expected": {
+        "exit_code": 0,
+        "mode": "offline_supplied",
+        "outcome": {"status": "completed", "reason": "completed"},
+        "input_hash_state": "complete",
+        "output_state": "complete",
+        "parameters": {},
+        "source_time": {"basis": "supplied_trade_times", "trade_count": 0, "first_entry_at": null, "last_exit_at": null},
+        "golden": null,
+        "contains": ["Trade count: 0", "No trade observations. Aggregate net P&L: unavailable."],
+        "absent": ["Total net (USD):", "## Trade", "0.00"],
+        "stderr_absent": ["Traceback"]
+      }
+    },
+    {
+      "id": "journal-open",
+      "scope": "lab_workflow",
+      "experiment": "journal-reviewer",
+      "input": "journal-missing-exit",
+      "expected": {
+        "exit_code": 1,
+        "mode": "offline_supplied",
+        "outcome": {"status": "stopped", "reason": "invalid_journal"},
+        "input_hash_state": "complete",
+        "output_state": "not_written",
+        "parameters": {},
+        "source_time": null,
+        "golden": null,
+        "contains": [],
+        "absent": [],
+        "stderr_absent": ["Traceback"]
+      }
+    },
+    {
+      "id": "market-default",
+      "scope": "lab_workflow",
+      "experiment": "market-brief",
+      "input": "market-bundled",
+      "expected": {
+        "exit_code": 0,
+        "mode": "offline_synthetic",
+        "outcome": {"status": "completed", "reason": "completed"},
+        "input_hash_state": "complete",
+        "output_state": "complete",
+        "parameters": {"limit": 5},
+        "source_time": {
+          "status": "available",
+          "retrieved_at": null,
+          "published_at": ["2020-01-01T12:00:00+00:00", "2020-01-02T14:30:00+00:00"]
+        },
+        "golden": "market-default",
+        "contains": [],
+        "absent": [],
+        "stderr_absent": ["Traceback"]
+      }
+    },
+    {
+      "id": "market-changed-limited",
+      "scope": "lab_workflow",
+      "experiment": "market-brief",
+      "input": "market-changed-title",
+      "expected": {
+        "exit_code": 0,
+        "mode": "offline_supplied",
+        "outcome": {"status": "completed", "reason": "completed"},
+        "input_hash_state": "complete",
+        "output_state": "complete",
+        "parameters": {"limit": 1},
+        "source_time": {
+          "status": "available",
+          "retrieved_at": null,
+          "published_at": ["2020-01-01T12:00:00+00:00"]
+        },
+        "golden": null,
+        "contains": [
+          "Caller-supplied saved feed: source authenticity and retrieval time are unverified.",
+          "Actual retrieval (UTC): unknown (offline input).",
+          "Source status: available. Showing 1 of 2 releases in feed order.",
+          "### Published (UTC): 2020-01-01T12:00:00+00:00",
+          "Fictional notice&#58; changed fictional wording &#38; sample calendars",
+          "Unverified input URL: `https://www.federalreserve.gov/newsevents/pressreleases/fictional20200101a.htm`"
+        ],
+        "absent": ["paper kites", "imaginary meeting room", "](https://", "Bundled fictional fixture:"],
+        "stderr_absent": ["Traceback"]
+      }
+    },
+    {
+      "id": "market-empty",
+      "scope": "lab_workflow",
+      "experiment": "market-brief",
+      "input": "market-empty-channel",
+      "expected": {
+        "exit_code": 0,
+        "mode": "offline_supplied",
+        "outcome": {"status": "completed", "reason": "completed"},
+        "input_hash_state": "complete",
+        "output_state": "complete",
+        "parameters": {"limit": 5},
+        "source_time": {
+          "status": "empty",
+          "retrieved_at": null,
+          "published_at": []
+        },
+        "golden": null,
+        "contains": [
+          "Source status: empty. Showing 0 of 0 releases in feed order.",
+          "No releases were present in this feed; this does not establish an absence of announcements."
+        ],
+        "absent": ["### Published", "](https://"],
+        "stderr_absent": ["Traceback"]
+      }
+    },
+    {
+      "id": "market-invalid",
+      "scope": "lab_workflow",
+      "experiment": "market-brief",
+      "input": "invalid-xml",
+      "expected": {
+        "exit_code": 1,
+        "mode": "offline_supplied",
+        "outcome": {"status": "stopped", "reason": "invalid_feed"},
+        "input_hash_state": "complete",
+        "output_state": "complete",
+        "parameters": {"limit": 5},
+        "source_time": {
+          "status": "invalid",
+          "retrieved_at": null,
+          "published_at": []
+        },
+        "golden": null,
+        "contains": ["Source status: invalid. Showing 0 of 0 releases in feed order.", "No usable releases."],
+        "absent": ["### Published", "private-marker", "](https://"],
+        "stderr_absent": ["Traceback", "private-marker"]
+      }
+    }
+  ]
+}
