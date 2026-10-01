@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "example-experiment",
+  "purpose": "Render fictional watchlist notes and show missing information.",
+  "owner": "@prodij",
+  "status": "experimental",
+  "command": ["python3", "run.py"],
+  "inputs": ["fixture.json"],
+  "outputs": ["reports/example.md"],
+  "access": "Python 3.11 or newer. No account, key, model or network required.",
+  "cost": "Zero API or model usage; local compute only.",
+  "tested_hosts": [],
+  "sources": [
+    {"kind": "synthetic", "reference": "fixture.json", "license": "CC0-1.0"}
+  ],
+  "kit": null
+}

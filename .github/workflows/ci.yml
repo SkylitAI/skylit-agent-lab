@@ -1,0 +1,31 @@
+name: Foundation checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.14']
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Test behavior and failure cases
+        run: python -m unittest discover -s tests -p test_template.py -v
+      - name: Check syntax
+        run: python -m compileall -q tests templates/experiment
+      - name: Run the reviewed synthetic template
+        run: |
+          python templates/experiment/run.py --output /tmp/lab-example.md
+          diff -u templates/experiment/expected.md /tmp/lab-example.md

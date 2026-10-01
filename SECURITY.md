@@ -1,0 +1,37 @@
+# Source and execution boundaries
+
+Use public Skylit Academy material for educational concepts, with lesson title and
+link. Use official public API/MCP documentation for technical contracts. Other
+inputs need public-reference or independently authored synthetic provenance and
+appropriate usage rights.
+
+Never copy, paraphrase, reconstruct or embed private Skylit formulas, weights,
+thresholds, calibration, strategies, internal source code or private agent context.
+This applies to code, prompts, tests, fixtures, images, reports, comments and Git
+history. Renamed variables or fictional inputs do not make a private algorithm
+publishable. Do not mount or index private vaults in distributable agent setups.
+
+Do not commit keys, account identifiers, private journals or raw authenticated
+responses. Ignore local reports. A future live workflow must use documented access
+and explicit budgets; no live functionality is part of the foundation.
+
+## What validation establishes
+
+Manifest validation is planned in the next foundation increment. It will check
+metadata and package paths without executing commands. Neither metadata nor this
+source policy proves that code is safe; neither is a sandbox. Files can change after validation; reviewers
+must use the reviewed revision and an appropriate execution environment.
+
+GitHub CI uses hosted runners, minimal token permissions and no production secrets.
+It runs repository tests and the reviewed synthetic template. Treat PR changes to
+tests and workflow files as executable code requiring review. Do not use
+`pull_request_target` to check out and execute untrusted contributions.
+
+## Report a possible disclosure
+
+Do not include the suspected secret, private formula or affected private payload
+in a public issue or PR. Notify the repository owner through an existing private
+channel and stop further distribution of the affected artifact. If private GitHub
+vulnerability reporting is available, it is also suitable; its setup remains a
+public-release requirement. Coordinate credential rotation or history remediation
+with the owner. Deleting the latest file alone does not remove Git history.
