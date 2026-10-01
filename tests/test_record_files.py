@@ -82,6 +82,63 @@ class PersistenceTests(unittest.TestCase):
         self.assertEqual(self.output.read_bytes(), b"line\r\nexisting\r\r\n")
         self.assertEqual(self.saved_record()["outputs"][0]["sha256"], hashlib.sha256(self.output.read_bytes()).hexdigest())
 
+    def test_utf8_bytes_are_passed_unchanged_and_hashed_without_newline_translation(self):
+        content = "Fictional · report\nexisting\r\n".encode("utf-8")
+
+        def binary_writer(path, received):
+            self.assertIs(received, content)
+            descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            with os.fdopen(descriptor, "wb") as stream:
+                stream.write(received)
+
+        with mock.patch.object(record_files.os, "linesep", "\r\n"):
+            final = record_files.save_run(self.output, content, sample_record(), binary_writer, preserve_outcome=True)
+        self.assertEqual(self.output.read_bytes(), content)
+        self.assertEqual(final["outputs"][0]["sha256"], hashlib.sha256(content).hexdigest())
+        self.assertEqual(self.saved_record(), final)
+
+    def test_non_utf8_bytes_are_rejected_before_any_output(self):
+        writer = mock.Mock(side_effect=AssertionError("Writer must not run"))
+        with self.assertRaises(record_files.PersistenceError) as caught:
+            record_files.save_run(self.output, b"private\xff", sample_record(), writer)
+        self.assertEqual(caught.exception.code, "invalid_report")
+        self.assertFalse(self.output.parent.exists())
+
+    def test_gap_report_can_be_saved_without_changing_stopped_outcome(self):
+        record = sample_record()
+        record["outcome"] = {"status": "stopped", "reason": "invalid_fixture"}
+        record["source_time"] = None
+        original = copy.deepcopy(record)
+        final = record_files.save_run(self.output, "Source unavailable.\n", record, private_report,
+                                     preserve_outcome=True)
+        self.assertEqual(final["outcome"], record["outcome"])
+        self.assertEqual(final["outputs"][0]["state"], "complete")
+        self.assertEqual(final["outputs"][0]["sha256"], hashlib.sha256(self.output.read_bytes()).hexdigest())
+        self.assertEqual(self.saved_record(), final)
+        self.assertEqual(record, original)
+
+    def test_preserving_an_invalid_outcome_fails_before_output(self):
+        record = sample_record()
+        record["outcome"]["reason"] = "invented"
+        with self.assertRaises(record_files.PersistenceError) as caught:
+            record_files.save_run(self.output, "text", record, private_report, preserve_outcome=True)
+        self.assertEqual(caught.exception.code, "invalid_record")
+        self.assertFalse(self.output.parent.exists())
+        with self.assertRaises(record_files.PersistenceError) as caught:
+            record_files.save_run(self.output, "text", sample_record(), private_report, preserve_outcome="false")
+        self.assertEqual(caught.exception.code, "invalid_record")
+        self.assertFalse(self.output.parent.exists())
+
+    def test_write_failure_overrides_preserved_computation_outcome(self):
+        record = sample_record()
+        record["outcome"] = {"status": "stopped", "reason": "invalid_fixture"}
+        writer = mock.Mock(side_effect=OSError("private failure detail"))
+        with self.assertRaises(record_files.PersistenceError) as caught:
+            record_files.save_run(self.output, b"Source unavailable.\n", record, writer, preserve_outcome=True)
+        self.assertEqual(caught.exception.code, "output_write_failed")
+        self.assertEqual(self.saved_record()["outcome"], {"status": "stopped", "reason": "output_write_failed"})
+        self.assertIsNone(self.saved_record()["outputs"][0]["sha256"])
+
     def test_stopped_computation_saves_record_without_calling_report_writer(self):
         record = sample_record()
         record["outcome"] = {"status": "stopped", "reason": "invalid_fixture"}
