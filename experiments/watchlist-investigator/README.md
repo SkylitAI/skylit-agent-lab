@@ -6,21 +6,30 @@ account, key, network call or model is used. This is an experimental offline
 package, maintained by `@prodij`; no agent host or live service is certified.
 
 Keep this package inside the full Lab checkout: it reuses
-`scripts/probe_kit_watchlist.py`. Use Python 3.11+, Git, and an already available
-clean Kit checkout at **`0f82039759ef4db9d5b3dbd90f52863f8074f2a6`**. This tested
-baseline is not the final release pin. Nothing is installed or downloaded by
-the command. Obtaining Kit while it is INTERNAL requires repository access.
+`scripts/probe_kit_watchlist.py`. Use Python 3.11+, Git, and a clean Kit checkout
+at **`0f82039759ef4db9d5b3dbd90f52863f8074f2a6`**. This tested baseline is not
+the final release pin. Obtaining Kit while it is INTERNAL requires repository
+access; rendering after setup needs no network or service credentials.
 
-From the Lab root, with Kit alongside Lab:
+From the Lab root, obtain Kit in a **new directory** and run the experiment:
 
 ```sh
-python3 -I -B experiments/watchlist-investigator/run.py --kit ../skylit-agent-kit
+git clone --no-checkout https://github.com/SkylitAI/skylit-agent-kit.git ../skylit-agent-kit-watchlist &&
+git -C ../skylit-agent-kit-watchlist checkout --detach 0f82039759ef4db9d5b3dbd90f52863f8074f2a6 &&
+python3 -I -B experiments/watchlist-investigator/run.py --kit ../skylit-agent-kit-watchlist
 ```
 
-From any working directory, substitute your actual absolute checkout paths:
+Use a POSIX shell or PowerShell 7 for this chained command. On Windows, replace
+`python3` with `py -3`. If `../skylit-agent-kit-watchlist` already exists, choose
+a different new directory and replace that path in all three lines. The `&&`
+operators ensure checkout runs only after cloning succeeds, and rendering runs
+only after checkout succeeds. Do not reset or repurpose an existing checkout.
+
+For another run from any working directory, substitute your actual absolute
+checkout paths and choose a new output filename:
 
 ```sh
-python3 -I -B /path/to/skylit-agent-lab/experiments/watchlist-investigator/run.py --kit /path/to/skylit-agent-kit --symbols QQQ,SPXW
+python3 -I -B /path/to/skylit-agent-lab/experiments/watchlist-investigator/run.py --kit /path/to/skylit-agent-kit-watchlist --symbols QQQ,SPXW --output /path/to/new-watchlist-report.md
 ```
 
 Both commands print the saved file's absolute path. The default is this package's
@@ -63,13 +72,16 @@ proprietary calculation or reconstructed score is included.
 From the Lab root, run the package's behavior tests with a local Kit checkout:
 
 ```sh
-SKYLIT_AGENT_KIT=../skylit-agent-kit python3 -m unittest discover -s tests -p test_watchlist_investigator.py -v
+SKYLIT_AGENT_KIT=../skylit-agent-kit-watchlist python3 -m unittest discover -s tests -p test_watchlist_investigator.py -v
 ```
 
+For PowerShell, set `$env:SKYLIT_AGENT_KIT = '../skylit-agent-kit-watchlist'`
+first, then run `py -3 -m unittest discover -s tests -p test_watchlist_investigator.py -v`.
+
 Tests use real Kit with socket operations and credential prompts blocked.
-Checked 2026-10-01 on Darwin 25.6.0 arm64 with Python 3.11.14 and 3.14.5: all
-47 Lab tests passed, including the seven package tests.
+Runtime revision `2fdda1c` was checked 2026-10-01 on Darwin 25.6.0 arm64 with
+Python 3.11.14 and 3.14.5: all 48 Lab tests passed, including the seven package tests.
 Without a local Kit checkout, five integration tests visibly skip; two setup
-checks still run. That leaves runtime integration unverified. No CI credentials
-or downloads are added. Explicit temporal evidence and run records are later
+checks still run. That leaves runtime integration unverified. CI receives no Kit
+credentials and does not download Kit. Explicit temporal evidence and run records are later
 increments.

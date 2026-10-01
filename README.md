@@ -5,10 +5,11 @@ community experiments; [Agent Kit](https://github.com/SkylitAI/skylit-agent-kit)
 holds maintained tools and starter workflows. Useful Lab work can graduate into
 Kit through review.
 
-**Status: contributor foundation.** The example below uses fictional observations
-and needs no account, API key, model or installed packages. Trading workflows and
-agent integrations are planned; this repository does not yet certify any agent
-host or live service. Repository access is required while the pilot is INTERNAL.
+**Status: contributor foundation and an offline Watchlist Investigator.** The
+examples use fictional observations and need no account, API key, model or
+installed packages to run. Agent integrations are planned; this repository does
+not yet certify any agent host or live service. Repository access is required
+while the pilot is INTERNAL.
 
 ## Run the example
 
@@ -23,6 +24,11 @@ python3 templates/experiment/run.py
 Open `templates/experiment/reports/example.md`. It shows two fictional watchlist
 notes and labels missing information. Change a note in
 `templates/experiment/fixture.json`, rerun, and see the output change.
+
+For a fictional GEX, VEX and flow report, try
+[Watchlist Investigator](experiments/watchlist-investigator/README.md). Its guide
+shows how to obtain a separate pinned Kit checkout, select symbols and save a
+local report while keeping missing components visible.
 
 ## Contribute an experiment
 
@@ -61,7 +67,7 @@ It does not certify its safety, sources, performance or agent compatibility.
 | Reproduce the checks | [Checks](docs/checks.md) |
 | Handle sources or report a possible leak | [Security and sources](SECURITY.md) |
 
-Code is MIT licensed. Synthetic fixture licensing is recorded with the template.
+Code is MIT licensed. Synthetic fixture licensing is recorded in each package's README.
 Software licensing does not include Skylit service access or third-party data
 rights. [Skylit Academy](https://www.skylit.ai/learn/reading-heatseeker) is the
 educational source for future Skylit examples; use
