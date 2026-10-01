@@ -1,39 +1,49 @@
 # Current scope
 
-Lab supplies a runnable synthetic template, metadata validation, behavioral tests
-and an offline [Watchlist Investigator](../experiments/watchlist-investigator/README.md).
-The experiment renders selected fictional symbols and gaps through a pinned local
-Kit checkout and saves private local reports with validated run records. Lab also
-has offline Journal Reviewer and Market Brief packages, each with private run
-records. Journal accepts closed USD cash-equity paper rows; Market shows entries
-from one press feed and optionally makes one explicit bounded public request.
-It does not supply a trading agent or evaluation engine. A separate explicit
-live entry point reuses pinned Kit clients; its verification uses mocked service
-responses.
+Lab supplies three experimental workflows that save private local Markdown
+reports and validated run records, plus a runnable synthetic template, metadata
+validation and behavioral tests. Watchlist Investigator renders fictional symbols
+and gaps through a pinned local Kit checkout. Market Brief reports selected
+Federal Reserve press releases. Journal Reviewer calculates and reviews closed
+USD cash-equity paper trades. None is a trading agent or evaluation engine. A separate explicit live entry
+point reuses pinned Kit clients; its verification uses mocked service responses.
 
 | Target | Status |
 |---|---|
 | Python utilities | Python 3.11+; CI targets 3.11 and 3.14 on Linux |
-| Watchlist Investigator | Offline synthetic input, selected symbols, source-time evidence, visible gaps and private reports/run records; no market-freshness guarantee or live mode |
-| Market Brief | [Offline-first package](../experiments/market-brief/README.md) with private report/record pairs; fictional defaults, saved RSS or explicit bounded Federal Reserve fetch; not broad market analysis |
-| Journal Reviewer | [Offline package](../experiments/journal-reviewer/README.md) saves private reports/records from a fictional fixture or supplied closed paper CSV; host verification pending |
+| [Watchlist Investigator](../experiments/watchlist-investigator/README.md) | Offline synthetic input, selected symbols, source-time evidence, visible gaps and private reports/run records; no live mode |
+| [Market Brief](../experiments/market-brief/README.md) | Bundled synthetic or caller-supplied saved feed; explicit `--fetch` makes at most one unauthenticated request to the fixed Federal Reserve feed. Selects 1–20 feed entries, not broad market analysis. Report and run-record integration includes completed and stopped outcomes; the README records a dated real fetch. |
+| [Journal Reviewer](../experiments/journal-reviewer/README.md) | Offline bundled synthetic or supplied paper CSV, exact calculations, escaped notes and private reports/run records; no inferred strategy or tax analysis; completed and stopped outcomes implemented |
 | Claude Code and OpenClaw | Planned host probes; no certified integration |
 | Muse | Provisional Muse Code CLI discovery recorded in the [host matrix](host-matrix.md); model access and Watchlist execution unverified |
 | Custom agents | Can invoke documented commands; integration example planned |
-| Live Skylit data | Separate Kit-backed entry point with explicit opt-in and request/credit/time caps; mocked verification passed, authenticated service verification and live run records pending |
-| Public contribution | Repository remains INTERNAL; outside access and fork CI remain unverified |
+| Live Skylit data | Separate pinned-Kit entry point with explicit opt-in and request/credit/time caps; mocked verification passed, authenticated service verification and live run records pending |
+| Public contribution | Outside access and fork CI remain unverified; publication is a separate release action |
 
-Source-time comparisons use a declared fictional reference and demonstration
-age threshold; they do not establish a synchronized market snapshot. Local run
-records identify consumed input bytes, revision observations, output hashes and
-stopped outcomes; they measure the Python workflow, not its launching model host.
-Authenticated live verification and host integrations remain
-planned. Later work includes evaluation cases and independent reproductions.
+Watchlist's source-time comparisons use a declared fictional reference and
+demonstration age threshold. Market preserves publication times separately from
+actual observed retrieval; saved input has no observed retrieval event. Journal
+times come from supplied paper trades. None establishes market freshness or a
+synchronized snapshot.
 
-Before public release, verify named review ownership, source and license
-provenance, relevant live and host behavior, and an observed newcomer trial.
-Public access changes and announcements are explicit release actions. Historical
-evaluation and paper trading are later work. Live orders are outside this scope.
+The [run records](run-record.md) identify consumed input bytes, Git observations,
+output hashes, execution/source times and completed or stopped outcomes. They
+describe the Python workflow, not its launching model host, and stay local rather
+than being adoption telemetry. Ordinary input or
+computation failures save stopped records when the output location is usable;
+early preflight failures and process termination cannot guarantee a record.
+Report and record writes are not atomic, so check command exit status as well as
+artifact contents. A Market gap report can be complete while its outcome remains
+stopped.
+
+The full release gates remain pending: named review ownership, source and license
+review, relevant live Skylit and host evidence, independent human reproductions,
+and an observed newcomer trial. Evaluation cases and a paper-trading workflow
+remain later work; reviewing supplied paper trades does not implement that
+workflow. Live orders are outside this scope. Public access changes and
+announcements are explicit release actions.
 
 Specialized reviewer staffing and the exact Muse surface remain release and
-integration requirements. The offline packages do not mark those requirements done.
+integration requirements. Implemented seed workflows and a dated public-feed
+fetch do not certify hosts, authenticated Skylit access or completion of these
+release gates.
