@@ -6,7 +6,7 @@
   "status": "experimental",
   "command": ["python3", "-X", "utf8", "-I", "-B", "run.py"],
   "inputs": ["fixture.csv"],
-  "outputs": ["reports/journal.md"],
+  "outputs": ["reports/journal.md", "reports/journal.md.run.json"],
   "access": "Python 3.11+ and the full Lab checkout. Default input is a bundled fictional CSV; explicit --input supplies caller-declared paper trades. No Kit, account, credentials, model, upload or network access is required.",
   "cost": "No API or model calls; local compute only.",
   "tested_hosts": [],
