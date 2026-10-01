@@ -3,6 +3,7 @@
 import io
 import json
 import os
+import shlex
 from pathlib import Path
 import subprocess
 import sys
@@ -187,6 +188,47 @@ with out.open('x', encoding='utf-8') as stream:
         self.assertNotIn("SKYLIT_API_KEY", env)
         self.assertNotIn("OPENAI_API_KEY", env)
         self.assertEqual(env["GIT_TERMINAL_PROMPT"], "0")
+
+    def test_repository_and_included_filters_are_rejected_before_status_executes_them(self):
+        sentinel = self.root / "filter-executed"
+        filter_script = self.lab / ".git/synthetic-filter.py"
+        filter_script.write_text(
+            "import sys\nfrom pathlib import Path\n"
+            f"Path({str(sentinel)!r}).write_text('executed')\n"
+            "sys.stdout.write(sys.stdin.read())\n", encoding="utf-8")
+        (self.lab / ".gitattributes").write_text("*.py filter=synthetic\n")
+        self.commit(self.lab)
+        command = shlex.join([sys.executable, str(filter_script)])
+        for kind in ("clean", "process"):
+            self.command("config", f"filter.synthetic.{kind}", command, cwd=self.lab)
+            os.utime(self.lab / "experiments/watchlist-investigator/run.py", None)
+            with self.assertRaisesRegex(setup.SetupError, "config contains content filters"):
+                self.validate()
+            self.assertFalse(sentinel.exists())
+            self.command("config", "--unset", f"filter.synthetic.{kind}", cwd=self.lab)
+        included = self.lab / ".git/filter-config"
+        self.command("config", "--file", included, "filter.synthetic.clean", command)
+        self.command("config", "include.path", included, cwd=self.lab)
+        with self.assertRaisesRegex(setup.SetupError, "config contains content filters"):
+            self.validate()
+        self.assertFalse(sentinel.exists())
+        self.assertFalse(self.dest.exists())
+
+    def test_workspace_dissociates_sources_with_borrowed_objects(self):
+        self.add_synthetic_runner()
+        borrowed_lab = self.root / "borrowed lab"
+        borrowed_kit = self.root / "borrowed kit"
+        for source, target in ((self.lab, borrowed_lab), (self.kit, borrowed_kit)):
+            self.command("-c", "init.templateDir=", "clone", "--shared", source, target)
+            self.assertTrue((target / ".git/objects/info/alternates").is_file())
+        setup.prepare_workspace(borrowed_lab, borrowed_kit, self.dest)
+        self.lab.rename(self.root / "relocated lab donor")
+        self.kit.rename(self.root / "relocated kit donor")
+        for name in ("lab", "kit"):
+            copied = self.dest / name
+            self.assertFalse((copied / ".git/objects/info/alternates").exists())
+            self.command("cat-file", "-e", "HEAD", cwd=copied)
+            self.assertEqual(self.command("status", "--porcelain", cwd=copied), "")
 
 
 KIT = Path(os.environ.get("SKYLIT_AGENT_KIT", ROOT.parent / "skylit-agent-kit"))

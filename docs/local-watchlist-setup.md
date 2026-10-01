@@ -17,6 +17,10 @@ It does not download repositories, provision keys or run a model/live service.
   Preserve work in a dirty checkout; use a separate clean checkout rather than
   resetting or discarding changes.
 
+Repository-configured Git clean/process filters are refused before the
+cleanliness check, including filters from included Git config. Use a separate
+checkout without those filters; this helper does not edit your Git configuration.
+
 No Python packages, API key or model subscription are needed. Setup has local
 disk/compute costs only. Native Windows execution remains unverified; in
 PowerShell, replace `python3` with `py -3`.
@@ -45,7 +49,8 @@ On success it prints the absolute workspace and report paths. The workspace has:
 The workspace directory uses owner-only permissions on POSIX, and the existing
 runner saves the report with owner-only permissions. The copies retain local Git
 origins pointing to their source checkouts. They are detached; choose a branch
-before editing the Lab copy. The originals remain unchanged.
+before editing the Lab copy. Borrowed Git objects are copied so the workspace
+does not depend on the original object stores. The originals remain unchanged.
 
 ## Run again or customize
 

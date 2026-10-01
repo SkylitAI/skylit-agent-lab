@@ -54,6 +54,11 @@ def checkout_revision(root, label, *, git_path):
     if Path(top).resolve() != root:
         raise SetupError(f"{label} path must be the repository root.")
     revision = git(["-C", root, "rev-parse", "HEAD"], git_path=git_path)
+    config = git(["-C", root, "config", "--includes", "--null", "--list"], git_path=git_path)
+    for entry in config.split("\0"):
+        key = entry.partition("\n")[0].lower()
+        if key.startswith("filter.") and key.endswith((".clean", ".process")):
+            raise SetupError(f"{label} config contains content filters; choose a checkout without configured clean/process filters.")
     changes = git(["-C", root, "status", "--porcelain", "--untracked-files=all"], git_path=git_path)
     if changes:
         raise SetupError(f"{label} checkout must be clean; preserve local work and choose a clean checkout.")
@@ -123,7 +128,7 @@ def prepare_workspace(lab, kit, destination):
         marker.write_text("Setup incomplete. Preserve any files and choose a new destination.\n", encoding="utf-8")
         for name, source, pin in (("lab", lab, revision), ("kit", kit, KIT_REVISION)):
             target = destination / name
-            git(["-c", "init.templateDir=", "clone", "--local", "--no-hardlinks", "--no-checkout",
+            git(["-c", "init.templateDir=", "clone", "--local", "--no-hardlinks", "--dissociate", "--no-checkout",
                  "--", source, target], git_path=git_path)
             git(["-C", target, "checkout", "--detach", pin], git_path=git_path)
             if checkout_revision(target, name.title(), git_path=git_path) != pin:
