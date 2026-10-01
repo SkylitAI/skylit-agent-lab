@@ -26,7 +26,7 @@ jobs:
       - name: Test behavior and failure cases
         run: python -m unittest discover -s tests -v
       - name: Check syntax
-        run: python -m compileall -q scripts tests templates/experiment
+        run: python -m compileall -q scripts tests templates/experiment experiments
       - name: Run the reviewed synthetic template
         run: |
           python templates/experiment/run.py --output /tmp/lab-example.md

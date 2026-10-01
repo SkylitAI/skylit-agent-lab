@@ -1,8 +1,10 @@
 # Render a synthetic watchlist through pinned Kit
 
-This T07 probe turns local fictional responses into a Markdown report using
-Kit's existing Python functions. It proves the consumption path for a later
-`experiments/watchlist-investigator` package. It is not that experiment yet.
+This probe turns local fictional responses into a Markdown report using Kit's
+existing Python functions. The
+[Watchlist Investigator package](../experiments/watchlist-investigator/README.md)
+uses this same parser/renderer path and Kit pin to save selected-symbol reports.
+Follow its guide for setup and the complete experiment command.
 
 Use Python 3.11+, Git, and an already available clean checkout of
 `https://github.com/SkylitAI/skylit-agent-kit` at
@@ -40,7 +42,7 @@ site packages and ambient Python import paths; `-B` avoids bytecode writes.
 |---|---|
 | `--kit PATH` | Required local repository root; wrong revision or visible changes exit 1 before rendering. Nothing is fetched or installed. |
 | `--symbols TEXT` → `symbols_list(TEXT)` | Defaults to `SPY,QQQ`; Kit uppercases, deduplicates in order and validates tickers. `qqq,SPXW,qqq` becomes QQQ then SPXW, with no SPX substitution. |
-| `--fixture PATH` | Defaults to [kit-watchlist.json](../examples/kit-watchlist.json). UTF-8 JSON with `gamma`, `vanna` and `flow` objects. This is the probe's synthetic envelope, not Kit's live raw-export format. |
+| `--fixture PATH` | Defaults to [kit-watchlist.json](../examples/kit-watchlist.json). A readable regular UTF-8 JSON file, at most 64 KiB, with `gamma`, `vanna` and `flow` objects. This is the probe's synthetic envelope, not Kit's live raw-export format. |
 | `parse_heatmap(envelope, symbols, metric)` | `gamma`/`vanna` each contain `data.symbols` and matching `meta.metric`; Kit preserves source nodes, times and expirations, and marks omitted symbols missing. |
 | `parse_flow(envelope, symbol)` | `flow` maps tickers to envelopes containing `data.ticker`, `timeframe: "1d"`, `trades` and `meta`. An empty trade list remains empty; omitted source scores remain unavailable. |
 | Missing flow envelope | Lab passes `missing("missing from synthetic fixture")`; no zero totals or trades are invented. |
@@ -80,11 +82,18 @@ This is local offline Python evidence, not agent-host or live-service support.
 All 36 Lab tests, manifest validation and compilation passed. A fresh default
 probe output matched the captured Markdown exactly.
 
+T08-A adds a bounded `load_fixture(path)` helper and an optional literal report
+title for the actual experiment consumer. New tests failed before those helpers
+existed; all ten consumer tests then passed. The original report is also checked
+in full, and a disposable local Kit copy exercises dirty-checkout rejection.
+
 Basic Lab checks do not require Kit. The tests look for `SKYLIT_AGENT_KIT` or a
-sibling checkout; if absent, five real-Kit tests visibly skip and the wrong-pin
-test still runs. **A skipped run leaves Kit consumption unverified.** No CI token,
-clone or download is added. Run the explicit command above with the pinned
-checkout and require all six tests to execute when reviewing this contract.
+sibling checkout; if absent, seven real-Kit tests visibly skip while the wrong-pin
+and two fixture-loading tests still run. **A skipped run leaves Kit consumption
+unverified.** No CI token or download is added. The dirty-checkout test copies
+only the supplied local Kit checkout using `git clone --local --no-hardlinks`.
+Run the explicit command above with the pinned checkout and require all ten
+consumer tests to execute when reviewing this contract.
 
 The fixture was independently authored from the Kit parser's consumed fields;
 its SPY values are invented and QQQ is deliberately absent. SkylitAI dedicates
@@ -92,8 +101,7 @@ its SPY values are invented and QQQ is deliberately absent. SkylitAI dedicates
 renderer and its documented source/watchlist/compatibility boundaries were read
 at the pinned revision; no private source or new domain calculation was used.
 
-Next: package a selected-symbol synthetic Watchlist Investigator around this
-same Kit parser/renderer path, recording its full Kit pin in the experiment
-manifest. Explicit time-gap evidence, richer flow cases, live access and host
-verification need later work. Review and rerun this proof before changing Kit's
-revision; no Kit files changed for T07.
+Watchlist Investigator records this full Kit pin in its experiment manifest.
+Explicit time-gap evidence, live access and host verification need later work.
+Review and rerun this proof before changing Kit's revision; the consumer and
+experiment reuse Kit without changing its implementation.

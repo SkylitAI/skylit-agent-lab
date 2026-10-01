@@ -12,6 +12,24 @@ KIT_REVISION = "0f82039759ef4db9d5b3dbd90f52863f8074f2a6"
 FIXTURE = Path(__file__).resolve().parents[1] / "examples" / "kit-watchlist.json"
 
 
+def load_fixture(path):
+    """Read at most 64 KiB of synthetic JSON before Kit validates its fields."""
+    path = Path(path)
+    try:
+        if not path.is_file():
+            raise OSError("Not a regular file")
+        with path.open("rb") as source:
+            content = source.read(65537)
+    except OSError:
+        raise ValueError("Choose a readable regular JSON file for --fixture.") from None
+    if len(content) > 65536:
+        raise ValueError("Fixture exceeds the 64 KiB limit; use a smaller synthetic fixture.")
+    try:
+        return json.loads(content.decode("utf-8"))
+    except (ValueError, RecursionError):
+        raise ValueError("Fixture must contain valid UTF-8 JSON within the nesting limit.") from None
+
+
 def load_kit(path):
     """Check the local revision before importing; never install or fetch anything."""
     root = Path(path).resolve()
@@ -33,7 +51,7 @@ def load_kit(path):
     return importlib.import_module("skylit_agent_kit.watchlist")
 
 
-def render_fixture(kit, fixture, selected):
+def render_fixture(kit, fixture, selected, *, title="Synthetic Kit consumer probe"):
     """Adapt local fixture envelopes to the existing Kit report input."""
     if (not isinstance(fixture, dict)
             or any(not isinstance(fixture.get(key), dict) for key in ("gamma", "vanna", "flow"))
@@ -58,7 +76,7 @@ def render_fixture(kit, fixture, selected):
         "flow_limit": 10, "sources": [], "requests": 0, "credits_reserved": 0,
     })
     return (
-        "# Synthetic Kit consumer probe\n\n"
+        f"# {title}\n\n"
         "**Fictional data only.** Every value and timestamp below is made up.\n"
         "Kit's unchanged renderer uses REST terminology; no service was contacted.\n"
         f"Kit revision: `{KIT_REVISION}`. No credentials or model required.\n\n"
@@ -74,7 +92,7 @@ def main():
     args = parser.parse_args()
     try:
         kit = load_kit(args.kit)
-        fixture = json.loads(args.fixture.read_text(encoding="utf-8"))
+        fixture = load_fixture(args.fixture)
         report = render_fixture(kit, fixture, args.symbols)
     except (OSError, subprocess.CalledProcessError):
         print("error: Cannot read the local Kit checkout or fixture; check paths and Git availability.", file=sys.stderr)
