@@ -1,8 +1,10 @@
 # Closed paper-journal input
 
 [`parse_journal(content)`](../scripts/paper_journal.py) validates an in-memory
-UTF-8 CSV and returns closed, fictional USD cash-equity trades for later exact
-arithmetic. It performs no file access, network calls, calculations, reporting or
+UTF-8 CSV and returns normalized rows under the closed USD cash-equity paper-trade
+input contract for later exact arithmetic. Paper or synthetic provenance is the
+caller's declaration; the parser verifies neither. The bundled fixture is
+independently fictional. The parser performs no file access, network calls, calculations, reporting or
 order execution. This is parser preparation; no journal workflow is implemented.
 There is no CLI or file loader. A future caller must bound file reads before
 passing bytes, for example reading at most `MAX_BYTES + 1` from an already-open
