@@ -101,7 +101,9 @@ outcome. New callers can pass the boolean `preserve_outcome=True` to retain thei
 validated completed or stopped outcome when a report is present. A saved gap
 report can therefore have complete output bytes while its computation remains
 stopped; the caller must still exit nonzero. This option cannot admit an invalid
-outcome, and a persistence failure always replaces the computation outcome.
+outcome. A persistence failure takes precedence in the returned error; persisted
+JSON may retain an earlier outcome after a failed rewrite or close, as described
+below.
 
 Pass `report=None` for an already-stopped computation. Its safe reason is retained,
 and only a stopped sidecar is saved. Invalid input can therefore create a record
