@@ -7,10 +7,12 @@ vault material, account credential, live request or model output is an input.
 The fixture sources are CC0-1.0 as declared in the package guides; the new case
 variations are also dedicated to CC0-1.0 by SkylitAI. Code remains MIT licensed.
 
-This increment supplies case data, a Watchlist golden and an optional explanation
+This document supplies case data, a Watchlist golden and an optional explanation
 rubric. It does **not** supply an evaluator or claim that the evaluation gate has
-passed. T26's combined three-seed record proof is a prerequisite for acceptance.
-T28A must establish execution isolation before T28B implements the evaluator.
+passed. A full gate must verify all three packages' reports, process exits and
+[private run records](run-record.md), using the actual pinned Kit checkout where
+required. Execution isolation must be implemented, reviewed and verified before
+an executable evaluator runs these cases.
 Host compatibility, paid-service access, live budgets and market freshness remain
 outside these offline cases.
 
@@ -46,8 +48,9 @@ The [manifest validator](manifest.md) stays inert. The future evaluator must
 dispatch only the three fixed reviewed package runners and the named Kit test
 below. It must never execute manifest `command` arrays, shell strings, arbitrary
 Python paths, extra user arguments or commands embedded in fixture text. No
-`--fetch` path belongs to these cases. Isolation, bounded child execution and
-credential/network exclusion belong to T28A; this case file is not a sandbox.
+`--fetch` path belongs to these cases. The execution boundary must bound child
+processes, exclude credentials and block network access. Those controls require
+separate implementation and verification; this case file is not a sandbox.
 
 ## Sources and goldens
 
@@ -89,11 +92,11 @@ missing or occurs more than once; do not silently apply a partial change.
 | Case ID / input ID | Fixed construction and selection |
 |---|---|
 | `watchlist-default` / `watchlist-bundled` | Default package fixture; select SPY,QQQ; reference `2026-10-01T14:01:00+00:00`; threshold 900 seconds. |
-| `watchlist-changed-evidence` / same input ID | Copy the Watchlist JSON object. In SPY's first gamma strike set `value` to -199; gamma `asOf` to `2026-10-01T13:44:00Z`; vanna `asOf` to `2026-10-01T14:02:00Z`. Remove only `timestamp` from its first flow trade. Serialize with sorted keys, ASCII escaping, no separator whitespace and one final LF, then UTF-8 encode. Select SPY,QQQ,SPXW; same reference and threshold. |
+| `watchlist-changed-evidence` / `watchlist-changed-evidence` | Copy the Watchlist JSON object. In SPY's first gamma strike set `value` to -199; gamma `asOf` to `2026-10-01T13:44:00Z`; vanna `asOf` to `2026-10-01T14:02:00Z`. Remove only `timestamp` from its first flow trade. Serialize with sorted keys, ASCII escaping, no separator whitespace and one final LF, then UTF-8 encode. Select SPY,QQQ,SPXW; same reference and threshold. |
 | `watchlist-invalid` / `invalid-json` | Exact bytes `not JSON` followed by one LF; default Watchlist selections/reference/threshold. |
 | `kit-budget-stop` / `kit-budget-fixtures` | The pinned Kit test's existing synthetic account/catalog and fake client; SPY with `max_credits=2`. See the dependency boundary below. |
 | `journal-default` / `journal-bundled` | Default package fixture. |
-| `journal-fees-gap` / same input ID | In the Journal bytes, replace the single `,0.10,` with `,1.10,` and the single `Fictional long paper trade.` with empty bytes. Preserve all other bytes, including LF endings. |
+| `journal-fees-gap` / `journal-fees-gap` | In the Journal bytes, replace the single `,0.10,` with `,1.10,` and the single `Fictional long paper trade.` with empty bytes. Preserve all other bytes, including LF endings. |
 | `journal-empty` / `journal-header-only` | Keep exactly the first line of the Journal fixture, including its LF. |
 | `journal-open` / `journal-missing-exit` | Replace the single `,11.25,` with `,,` in the Journal bytes, leaving LABA's exit price empty. |
 | `market-default` / `market-bundled` | Default package fixture and limit 5. |
@@ -164,9 +167,9 @@ successful full evaluation.
 
 ## Negative checks for the future evaluator
 
-T28B tests must change candidate results while leaving expectations fixed. When
-tampering with a report, also update its candidate record digest; otherwise a
-hash mismatch alone could conceal a weak fidelity check.
+Evaluator regression tests must change candidate results while leaving
+expectations fixed. When tampering with a report, also update its candidate
+record digest; otherwise a hash mismatch alone could conceal a weak fidelity check.
 
 1. Change a reported source value or return an unchanged report for changed
    input: -199 back to -180, Journal 3.76 back to 4.76, or the Market title back
