@@ -38,9 +38,10 @@ muse auth --help
 Here `muse` denotes the downloaded binary, not an installed command. Each
 invocation used a minimal environment: `PATH=os.defpath`, temporary
 `MUSE_AUTH_PATH`, `XDG_CONFIG_HOME`, `XDG_CACHE_HOME`, `XDG_DATA_HOME` and
-`TMPDIR` locations, with no `HOME` override. No existing credentials or global
-configuration were inspected. The temporary auth file was not created. No
-login, credential submission, installation or model execution was attempted.
+`TMPDIR` locations, with no `HOME` override. No credentials or global
+configuration were supplied to these commands; internal filesystem accesses
+were not traced. The temporary auth file was not created. No login, credential
+submission, global installation or model execution was attempted.
 
 ## Available interface
 
