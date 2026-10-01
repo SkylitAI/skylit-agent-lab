@@ -32,18 +32,22 @@ checkout paths and choose a new output filename:
 python3 -X utf8 -I -B /path/to/skylit-agent-lab/experiments/watchlist-investigator/run.py --kit /path/to/skylit-agent-kit-watchlist --symbols QQQ,SPXW --output /path/to/new-watchlist-report.md
 ```
 
-Both commands print the saved file's absolute path. The default is this package's
-ignored `reports/watchlist.md`; it is created with owner-only permissions on
-POSIX. Existing files and final-path symlinks are refused. Choose a new path for
+Both commands print absolute paths for the Markdown report and its adjacent
+`<output>.run.json` record. The defaults are this package's ignored
+`reports/watchlist.md` and `reports/watchlist.md.run.json`; both are created with
+owner-only permissions on POSIX. Existing files and final-path symlinks are
+refused. Choose a new path for
 another run, for example `--output /path/to/new-report.md`. Explicit relative
 `--kit`, `--fixture` and `--output` paths use your current working directory;
 default fixture/output paths always use this package's directory. Custom output
-destinations may not be ignored by Git; keep local reports out of commits.
+destinations may not be ignored by Git; keep local reports out of commits. All
+`*.run.json` files are ignored throughout Lab. Neither artifact is uploaded.
 
 Keep `-X utf8` in the command: the pinned Kit writer uses Python's default text
 encoding. The runner rejects a non-UTF-8 default before creating any output or
 parent directory. If stdout cannot display the output path, it also stops before
-writing; use UTF-8 stdout or choose an ASCII output path.
+writing; use UTF-8 stdout or choose an ASCII output path. The output filename
+must be printable, at most 255 characters, and contain no colon or backslash.
 
 The default report contains:
 
@@ -60,15 +64,20 @@ Use `--fixture PATH` for another **synthetic** UTF-8 JSON fixture of at most
 Lab supplies the synthetic context. Validation/rendering finish before the
 output is opened, so invalid inputs cannot create or truncate a report.
 
-Success exits 0. Missing CLI arguments exit 2; source, Kit and output failures
+Success exits 0 only after both report writing and validated record finalization
+succeed. Missing CLI arguments exit 2; source, Kit and output failures
 exit 1 with an actionable `error:` on stderr. A wrong Kit revision or dirty
 checkout is rejected; review local changes and supply the exact pin. Missing/malformed
 component fields may become explicit gaps according to Kit's parser.
 
-Every number and timestamp is fictional, including the fixed report date/time.
+All market observations and source timestamps are fictional, including the fixed
+report date/time. The run record separately captures actual UTC execution times.
 The unchanged Kit renderer's REST/retrieval wording refers to fixture data here.
-Zero requests and credits are used. There is no live mode, price chart, trading
-signal or order execution in this package. Time comparisons below apply only to
+The Python workflow attempts zero requests and reserves zero credits; observed
+billing remains unknown. Its model usage is `none`, with provider/tokens null.
+These values exclude any LLM host that launches Python; host evidence must
+separately record host usage and link or hash this workflow record. There is no
+live mode, price chart, trading signal or order execution in this package. Time comparisons below apply only to
 the declared fictional reference and source fields.
 
 The fixture was independently authored using the pinned Kit's consumed fields;
@@ -102,6 +111,30 @@ SPY ages are 360, 420, 300 and 330 seconds respectively, with a 120-second span;
 QQQ's times and span are unavailable. Parsed rows are shared by both renderers;
 the structured assessment can be reused without scraping Markdown.
 
+The [run record contract](../../docs/run-record.md) stores the observed Lab
+revision and clean/dirty/unknown state before artifact creation, the verified Kit
+pin, exact consumed fixture SHA-256, normalized parameters, structured source-time
+evidence, enforced limits and the completed report's byte hash. A non-Git Lab copy
+records unknown provenance; a dirty checkout retains its revision and dirty state.
+These observations do not freeze either checkout against concurrent changes.
+Records contain an output basename, not absolute input paths, raw fixture payloads,
+CLI arguments, environment values or credentials. Keep both artifacts private.
+
+After preflight, ordinary Kit, symbol and fixture errors save a stopped record
+when the sidecar location is writable. A Kit failure leaves the input `not_read`;
+malformed complete bytes retain their hash, while unreadable or oversized inputs
+have no complete hash. Parameters remain null until fully validated. CLI usage,
+time/encoding/output-name preflight errors and process termination cannot
+guarantee a record. A stopped record path is printed on stderr.
+
+The sidecar is exclusively reserved before report creation. An existing sidecar
+stops the run without writing a report; an existing report is preserved and gets
+a stopped record if the sidecar can be created. The two files are **not atomic**:
+a write failure can leave a partial report or incomplete record. Finalization
+failure always exits nonzero, even if a report or apparently completed JSON
+remains. Do not infer workflow success from either file alone after an error.
+Choose a new output path after a stopped run; neither artifact is overwritten.
+
 From the Lab root, run the package's behavior tests with a local Kit checkout:
 
 ```sh
@@ -114,9 +147,11 @@ first, then run `py -3 -X utf8 -m unittest discover -s tests -p 'test_watchlist*
 Tests use real Kit with socket operations and credential prompts blocked.
 Encoding regressions force `LC_ALL=C` and explicit `-X utf8=0` / `-X utf8`, checking
 refusal before output creation, exact UTF-8 bytes, permissions and no overwrite.
-Checked 2026-10-01 on Darwin 25.6.0 arm64 with Python 3.11.14 and 3.14.5:
-all 60 Lab tests passed, including the twelve package tests and six source-time tests.
-Without a local Kit checkout, nine package integration tests visibly skip; three setup
-checks still run. That leaves runtime integration unverified. CI receives no Kit
-credentials and does not download Kit. Source-time arithmetic tests run without Kit;
-host verification and run records remain later increments.
+Record tests check exact input/output hashes, real UTC execution times, synthetic
+source-time evidence, private permissions, clean/dirty/non-Git Lab observations,
+stopped records and persistence errors. Local Git clones and synthetic changes
+exercise provenance without fetching. Without a local pinned Kit checkout,
+integration tests visibly skip and leave runtime integration unverified. CI
+receives no Kit credentials and does not download Kit. Source-time arithmetic,
+record contract and persistence helper tests run without Kit. Host verification
+remains separate from this offline workflow evidence.
