@@ -3,17 +3,20 @@
 A run record describes one experiment Python process and its local report. It
 does not measure the agent or LLM host that launched that process. A later host
 record may link the exact record-file hash and record its own usage separately.
-[Watchlist Investigator](../experiments/watchlist-investigator/README.md) writes
-`<output>.run.json` beside its report. A successful command validates and saves
+[Watchlist Investigator](../experiments/watchlist-investigator/README.md),
+[Journal Reviewer](../experiments/journal-reviewer/README.md) and
+[Market Brief](../experiments/market-brief/README.md) write `<output>.run.json`
+beside their reports. A successful command validates and saves
 both artifacts; ordinary computation failures save a stopped record when the
 sidecar is writable. Early CLI/preflight errors and process termination cannot
 guarantee a record. Check the command's exit status as well as record contents.
 
 The v1 envelope has explicit profiles for `watchlist-investigator`,
-`journal-reviewer` and `market-brief`. Watchlist's existing profile is unchanged.
-The Journal/Market additions below validate record shapes; this contract increment
-alone does not establish their runner emission or persistence integration. No
-model provider or authenticated trading-service profile is accepted.
+`journal-reviewer` and `market-brief`. All three runners emit these records for
+completed and stopped outcomes when their output paths are usable. The schema
+validates assertions; workflow tests separately check emitted files and their
+observed hashes. No model provider or authenticated trading-service profile is
+accepted.
 
 All keys below are required; unknown keys are rejected at every object level.
 `null` means unavailable, not zero or an empty collection. SHA values use lowercase
@@ -61,7 +64,7 @@ and a known Kit component reason prefixed by `timestamp missing or invalid; `.
 Other fields have a UTC timestamp, finite numeric age and null reason. Each span
 has `seconds` (finite nonnegative number or null) and `valid_fields` (integer
 0–4); fewer than two fields means null span. Validation checks shape and states,
-not the truth of observations or correctness of T09's arithmetic.
+not the truth of observations or correctness of the source-time arithmetic.
 
 JSON must be UTF-8, at most **262144 bytes**, without duplicate keys, nonfinite
 numbers, more than 32 container levels or booleans masquerading as numeric counts.
@@ -80,7 +83,7 @@ Run the contract tests without Kit: `python3 -m unittest discover -s tests -p te
 
 ## Journal and Market profiles
 
-Both new profiles require `kit: null`: neither experiment consumes Kit. They
+Journal and Market require `kit: null`: neither experiment consumes Kit. They
 retain the exact root keys, Lab observation, actual UTC execution timestamps,
 private report output shape and bounded decoder. `parameters` and `source_time`
 may be null before their validation/parsing stages. Completed records require
