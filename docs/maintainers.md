@@ -11,6 +11,8 @@ Experiment authors name a maintainer in their manifest. Maintainers keep setup,
 dependencies, examples and evidence current or mark the experiment archived.
 Contributors can volunteer to maintain a specific experiment through its PR or
 issue; broader repository write access requires a separate owner decision.
+The manifest handle is a declared owner, not proof of accepted maintenance.
+See [governance](governance.md) for explicit acceptance, scope and handoff rules.
 
 Use repository issues for non-sensitive bugs, proposals and documentation
 questions. Include a reproducible input and expected/observed result. Do not post

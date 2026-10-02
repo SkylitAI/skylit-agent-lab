@@ -1,0 +1,51 @@
+name: Experiment or maturity review
+description: Propose an experiment, share reproduction evidence, or request a status review.
+title: "[Experiment review] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the user task and link sanitized evidence. Read CONTRIBUTING.md
+        and docs/governance.md first. This form requests review; it does not assign
+        a maintainer or approve a promotion. Never post credentials, private
+        journals, account data or raw live responses.
+  - type: input
+    id: experiment
+    attributes:
+      label: Experiment and user task
+      description: Link an existing package, or describe the proposed input and useful output.
+    validations:
+      required: true
+  - type: dropdown
+    id: request
+    attributes:
+      label: Review requested
+      options:
+        - New experiment
+        - Independent reproduction
+        - Maintenance acceptance
+        - Kit graduation
+        - Archive or ownership change
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Observed evidence and revisions
+      description: Provide exact Lab/Kit revisions, date, environment, commands/exits, checked input/output hashes and failures. Distinguish human, author, automated and AI observations. Link evidence without private logs.
+    validations:
+      required: true
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: Sources, access and limits
+      description: Record source rights/attribution, required access/costs, tested modes/hosts and what remains unverified.
+    validations:
+      required: true
+  - type: textarea
+    id: ownership
+    attributes:
+      label: Ownership and missing requirements
+      description: Link explicit maintenance acceptance when applicable; otherwise say unassigned. For graduation link the Kit review/release and Lab migration, or name what is missing. Listing a person does not assign them.
+    validations:
+      required: true

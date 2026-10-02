@@ -84,9 +84,9 @@ Run this AI slop check on the actual change, whether written by a person or AI:
 | Status | Required review evidence |
 |---|---|
 | experimental | Runnable instructions, scope, owner and source disclosures |
-| reproduced | A non-author reproduced the pinned example and recorded the result |
-| maintained | A named maintainer accepts updates and compatibility review |
-| graduated | An accepted Kit change and versioned release, linked with attribution |
+| reproduced | A non-author human independently reproduced the pinned example and recorded the result |
+| maintained | Reproduction evidence and a named human's explicit acceptance of scoped maintenance |
+| graduated | Maintained requirements, accepted Kit change/versioned release, attribution and a verified Lab migration |
 | archived | Reason for archiving and any maintained replacement |
 
 The validator checks allowed status values, not the truth of those claims. Start
@@ -94,3 +94,6 @@ new submissions as `experimental`. A useful experiment may stay in Lab; promotio
 requires demand, repeatable setup, relevant tests, documented permissions/costs and
 an owner. Lab consumes the released Kit implementation after graduation. Kit must
 not depend on unreleased Lab code.
+
+Follow [ownership and promotion](docs/governance.md) for reviewed status changes,
+missing-owner handling and evidence required to move a capability into Kit.
