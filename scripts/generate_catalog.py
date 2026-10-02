@@ -141,7 +141,8 @@ def build_catalog(root):
         groups.setdefault(questions.get(identifier), []).append(identifier)
     lines = ["# Experiment catalogue", "",
         "Find an experiment by the question it helps inspect. Owner, access and cost are",
-        "manifest declarations. Historical checks identify their recorded source revision;",
+        "manifest declarations. Cost and usage declarations cover the Python workflow;",
+        "any launching host/model charges are separate. Historical checks identify their recorded source revision;",
         "they do not establish current-head verification, human reproduction or native host support.", ""]
     for question in sorted(groups, key=lambda value: (value is None, value or "")):
         lines += ["## " + (_text(question) if question is not None else "Other experiments"), ""]

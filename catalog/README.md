@@ -1,7 +1,8 @@
 # Experiment catalogue
 
 Find an experiment by the question it helps inspect. Owner, access and cost are
-manifest declarations. Historical checks identify their recorded source revision;
+manifest declarations. Cost and usage declarations cover the Python workflow;
+any launching host/model charges are separate. Historical checks identify their recorded source revision;
 they do not establish current-head verification, human reproduction or native host support.
 
 ## What dated entries appear in this one press&#45;release feed&#63;
