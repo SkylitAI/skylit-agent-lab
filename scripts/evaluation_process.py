@@ -27,7 +27,8 @@ def run_child(argv, cwd, remaining_seconds):
     ``io_failed`` or ``cleanup_failed``. Windows returns ``unsupported_platform``.
     Cleanup kills the group, closes pipes and allows at most one further second
     to reap the direct child; it never fabricates an exit when reaping fails.
-    The container's init reaps orphaned descendants.
+    Orphan reaping requires an external init/subreaper; this helper reaps only
+    its direct child.
     """
     result = {"exit_code": None, "stdout": b"", "stderr": b"", "stop_reason": "invalid_request"}
     if (type(remaining_seconds) not in (int, float) or remaining_seconds < 0
