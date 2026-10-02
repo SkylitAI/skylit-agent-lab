@@ -11,8 +11,11 @@ mount, index, copy, paraphrase or reconstruct private vault formulas, strategies
 weights, calibration or internal agent context into distributable artifacts.
 These instructions are source rules, not an operating-system sandbox.
 
-Never request credentials in chat or commit private reports. Live calls require
-the user's authorized account and budget. This foundation has no live calls.
+Never request credentials in chat or commit private reports. Watchlist
+Investigator and Journal Reviewer run offline. Market Brief defaults to offline
+input and offers an explicit `--fetch` for one fixed public Federal Reserve feed,
+without authentication. Authenticated or metered service calls require the user's
+authorized account and budget; live Skylit integration remains pending.
 Do not install global agent configuration or change repository visibility as part
 of a template run. Do not claim a host, source or integration is verified without
 a dated result for the actual version and environment.
