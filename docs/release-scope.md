@@ -38,9 +38,11 @@ stopped.
 
 The full release gates remain pending: named review ownership, source and license
 review, relevant live Skylit and host evidence, independent human reproductions,
-and an observed newcomer trial. Evaluation cases and a paper-trading workflow
-remain later work; reviewing supplied paper trades does not implement that
-workflow. Live orders are outside this scope. Public access changes and
+and an observed newcomer trial. The [offline evaluation cases](evaluation.md)
+define fixed source, gap and report checks; their scope excludes host certification
+and live access. A paper-trading workflow remains later work; reviewing supplied
+paper trades does not implement that workflow. Live orders are outside this scope.
+Public access changes and
 announcements are explicit release actions.
 
 Specialized reviewer staffing and the exact Muse surface remain release and

@@ -1,11 +1,12 @@
 # Experimental Federal Reserve press feed
 
 [`scripts/fed_press_feed.py`](../../scripts/fed_press_feed.py) extracts release
-titles, canonical Board links and UTC publication times for a future Market
-Brief consumer. It is an experimental Lab adapter, separate from Watchlist and
-its run-record schema. There is no CLI, renderer, model call or order feature.
-A shared maintained adapter belongs in Kit after review and graduation; this
-implementation does not change Kit or complete runner integration.
+titles, canonical Board links and UTC publication times for
+[Market Brief](../../experiments/market-brief/README.md). The adapter exposes
+local parsing and an explicit fetch function; the Market Brief package adds its
+CLI, report renderer and [run-record profile](../run-record.md#journal-and-market-profiles).
+It uses no model and places no orders. A shared maintained adapter belongs in Kit
+after review and graduation; the current implementation remains experimental in Lab.
 
 ## Source and reuse
 
@@ -72,7 +73,7 @@ Any invalid required item rejects the **whole feed**: status is `invalid` and
 `items` is empty. There is no partial-success record or silent item dropping.
 An invalid or unavailable result therefore cannot be mistaken for a valid empty
 release list. Consumers must check status before using items. All titles remain
-untrusted data, including text resembling instructions. A later consumer must
+untrusted data, including text resembling instructions. Consumers must
 escape text for its rendering context; parsing grants no execution authority.
 
 ## Explicit fetching
@@ -113,5 +114,6 @@ exact body hash above; the first item's publication time was
 `2026-09-30T13:00:00+00:00`. No item URLs were requested, and no credential,
 paid API or model was used. This is one observed fetch, not an availability claim.
 These checks do not establish ongoing availability, freshness, completeness of
-all Board releases, host compatibility, or current Watchlist schema acceptance.
-Market Brief integration and a reviewed record extension remain separate work.
+all Board releases or host compatibility. The
+[Market Brief guide](../../experiments/market-brief/README.md) records a separate
+dated workflow fetch with report and run-record evidence.
