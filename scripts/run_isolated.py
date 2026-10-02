@@ -123,19 +123,33 @@ def run_probe(stage, client, without_kit, evaluate=False):
                 print("Docker cleanup was incomplete; inspect this run's local resources.")
 
 
+def expected_lab_revision(value):
+    if not re.fullmatch(r"[0-9a-f]{40}", value):
+        raise argparse.ArgumentTypeError("Expected exactly 40 lowercase hexadecimal characters for the Lab revision.")
+    return value
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--kit", type=Path, help="Clean local checkout at the experiment's pinned Kit revision")
     mode.add_argument("--without-kit", action="store_true", help="Check isolation and independent seeds only; Watchlist remains unverified")
     parser.add_argument("--evaluate", action="store_true", help="Run all 12 fixed offline evaluation cases after isolation checks")
+    parser.add_argument("--expected-lab", type=expected_lab_revision, metavar="SHA",
+                        help="Require this exact staged Lab revision before Docker; valid only with --evaluate")
     args = parser.parse_args()
+    if args.expected_lab is not None and not args.evaluate:
+        parser.error("--expected-lab requires --evaluate.")
     try:
         with tempfile.TemporaryDirectory(prefix="skylit-lab-isolation-") as directory:
             base = Path(directory)
             stage = base / "context"
             stage.mkdir()
             lab_revision = stage_checkout(ROOT, stage / "lab")
+            if args.expected_lab is not None and lab_revision != args.expected_lab:
+                print(f"Isolation check failed: Lab revision mismatch; expected {args.expected_lab}; "
+                      f"observed {lab_revision}. Use a clean checkout at the expected revision.")
+                return 1
             if args.kit is not None:
                 kit_revision = stage_checkout(args.kit, stage / "kit")
                 print(f"Committed Lab: {lab_revision}; Kit: {kit_revision}", flush=True)

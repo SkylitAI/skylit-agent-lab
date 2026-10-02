@@ -59,6 +59,9 @@ Parsing cases alone establishes no execution permission or isolation.
 
 ## Run the isolated evaluation
 
+To repeat a recorded result with an explicit Lab revision check and sanitized
+evidence, follow the [reproduction procedure](reproduce.md).
+
 From a clean, committed Lab checkout with Docker Engine and Buildx available:
 
 ```sh
