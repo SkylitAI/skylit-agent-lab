@@ -23,6 +23,15 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Validate metadata without running commands
         run: python scripts/validate_experiments.py
+      - name: Explain hosted integration coverage
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
+          ### Kit integration coverage
+          This job does not check out the internal Kit repository. Kit-dependent
+          skips in the test output are unverified hosted coverage, even when the
+          job passes. See docs/checks.md for the pinned local verification and
+          the separate cross-repository access prerequisite.
+          EOF
       - name: Test behavior and failure cases
         run: python -m unittest discover -s tests -v
       - name: Check syntax
