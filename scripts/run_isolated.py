@@ -49,10 +49,14 @@ def stage_checkout(source, destination):
 
 def docker_client(config):
     # Read endpoint/plugin metadata only; never copy the user's Docker config.
-    endpoint = os.environ.get("DOCKER_HOST") if not os.environ.get("DOCKER_CONTEXT") else None
+    context = os.environ.get("DOCKER_CONTEXT")
+    endpoint = os.environ.get("DOCKER_HOST") if not context else None
     if not endpoint:
+        command = ["docker", "context", "inspect", "--format", "{{.Endpoints.docker.Host}}"]
+        if context:
+            command += ["--", context]
         endpoint = subprocess.run(
-            ["docker", "context", "inspect", "--format", "{{.Endpoints.docker.Host}}"],
+            command,
             check=True, capture_output=True, text=True, timeout=15,
         ).stdout.strip()
     if not endpoint.startswith("unix://") or not Path(endpoint[7:]).is_absolute():
