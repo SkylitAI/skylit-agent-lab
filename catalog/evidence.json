@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "questions": {
+    "watchlist-investigator": "Where are the gaps in fictional watchlist observations?",
+    "journal-reviewer": "What do my closed paper-trade rows and entered notes show?",
+    "market-brief": "What dated entries appear in this one press-release feed?"
+  },
+  "offline_evaluation": {
+    "date": "2026-10-02",
+    "lab_revision": "dc530976b58fcc86db104ac7a173fca975c3718a",
+    "kit_revision": "0f82039759ef4db9d5b3dbd90f52863f8074f2a6",
+    "python": "3.11.17",
+    "passed_cases": 12,
+    "experiments": ["watchlist-investigator", "journal-reviewer", "market-brief"],
+    "review_basis": "author_and_ai",
+    "guide": "docs/evaluation.md",
+    "pull_request": "https://github.com/SkylitAI/skylit-agent-lab/pull/33"
+  }
+}
