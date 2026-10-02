@@ -180,9 +180,9 @@ Market completes only for `available` or `empty`; a valid empty feed is not an
 invalid/unavailable feed. An invalid or unavailable feed may have a fully saved
 gap report: `outputs.state: complete` and its exact hash coexist with
 `outcome.status: stopped`. The command still exits nonzero. Output completeness
-is separate from workflow success. These shapes permit byte-written reports,
-but safe byte hashing and preserving gap outcomes require the separate
-persistence extension before runner integration.
+is separate from workflow success. Journal and Market use the persistence helper
+below to hash exact UTF-8 report bytes and preserve a stopped outcome when saving
+a complete gap report.
 
 ## Private local persistence helper
 
