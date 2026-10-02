@@ -38,11 +38,19 @@ The dependency entry instead has exactly `exit_code`, `tests_run`, `failed_tests
 `simulated_stop_contains`, `simulated_credits` and `lab_record`. Exit 0 there means
 one maintained dependency test passed, not that a Watchlist workflow completed.
 
-A future loader must bound this JSON to 64 KiB, reject duplicate/unknown keys,
-unknown or repeated identifiers, nonfinite values and incorrect types. Expected
-values are reviewable test data; changing them changes the test. Do not regenerate
-them from the implementation during evaluation. Parsing this file establishes
-neither execution permission nor correctness.
+The [case loader](../scripts/evaluation_cases.py) accepts at most 64 KiB of UTF-8
+JSON and 32 nested containers. `parse_cases(bytes)` rejects duplicate or unknown
+keys, unknown or repeated identifiers, incorrect types and nonfinite numbers.
+It requires all 12 cases, each bound to its reviewed scope, experiment, input and
+golden IDs; their order may vary. Literal checks must contain nonempty UTF-8
+strings. `load_cases(path)` reads a bounded regular file; it does not execute
+anything. `validate_cases(object)` checks already decoded metadata without I/O.
+Source-time shapes reuse the run-record validators without recalculating evidence.
+
+Expected values are reviewable test data; changing them changes the test. Do not
+regenerate them from the implementation during evaluation. Parsing this file
+establishes neither execution permission nor correctness. The loader does not
+run cases, resolve input/golden IDs into files, or implement the explanation rubric.
 
 The [manifest validator](manifest.md) stays inert. The future evaluator must
 dispatch only the three fixed reviewed package runners and the named Kit test
