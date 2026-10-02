@@ -7,7 +7,7 @@ vault material, account credential, live request or model output is an input.
 The fixture sources are CC0-1.0 as declared in the package guides; the new case
 variations are also dedicated to CC0-1.0 by SkylitAI. Code remains MIT licensed.
 
-This document supplies case data, a Watchlist golden and an optional explanation
+This document supplies case data, report goldens and an optional explanation
 rubric. It does **not** supply an evaluator or claim that the evaluation gate has
 passed. A full gate must verify all three packages' reports, process exits and
 [private run records](run-record.md), using the actual pinned Kit checkout where
@@ -30,19 +30,28 @@ Workflow expectations have exactly `exit_code`, `mode`, `outcome`,
 expected record values. Compare numeric ages/spans by value, allowing JSON's
 `120` and `120.0`; booleans are not numeric evidence. `contains` and `absent` are
 literal report text checks; `stderr_absent` forbids literal diagnostics text.
-None are regular expressions or instructions. A non-null
-golden requires the whole report comparison as well. `not_written` requires no
-report file and a null report hash; it does not mean an empty report.
+None are regular expressions or instructions. All nine report-producing cases
+require a non-null golden and whole-report comparison as well. The two
+`not_written` cases have null goldens and require no report file and a null
+report hash; they do not mean an empty report.
 
 The dependency entry instead has exactly `exit_code`, `tests_run`, `failed_tests`,
 `simulated_stop_contains`, `simulated_credits` and `lab_record`. Exit 0 there means
 one maintained dependency test passed, not that a Watchlist workflow completed.
 
-A future loader must bound this JSON to 64 KiB, reject duplicate/unknown keys,
-unknown or repeated identifiers, nonfinite values and incorrect types. Expected
-values are reviewable test data; changing them changes the test. Do not regenerate
-them from the implementation during evaluation. Parsing this file establishes
-neither execution permission nor correctness.
+The [case loader](../scripts/evaluation_cases.py) accepts at most 64 KiB of UTF-8
+JSON and 32 nested containers. `parse_cases(bytes)` rejects duplicate or unknown
+keys, unknown or repeated identifiers, incorrect types and nonfinite numbers.
+It requires all 12 cases, each bound to its reviewed scope, experiment, input and
+golden IDs; their order may vary. Literal checks must contain nonempty UTF-8
+strings. `load_cases(path)` reads a bounded regular file; it does not execute
+anything. `validate_cases(object)` checks already decoded metadata without I/O.
+Source-time shapes reuse the run-record validators without recalculating evidence.
+
+Expected values are reviewable test data; changing them changes the test. Do not
+regenerate them from the implementation during evaluation. Parsing this file
+establishes neither execution permission nor correctness. The loader does not
+run cases, resolve input/golden IDs into files, or implement the explanation rubric.
 
 The [manifest validator](manifest.md) stays inert. The future evaluator must
 dispatch only the three fixed reviewed package runners and the named Kit test
@@ -65,6 +74,19 @@ separate implementation and verification; this case file is not a sandbox.
 | `watchlist-default` | Entire [Watchlist expected report](../evaluations/watchlist-expected.md), including its synthetic source-time section and final LF. |
 | `journal-default` | Entire [Journal expected report](../examples/paper-journal-expected.md), including final LF. |
 | `market-default` | [Expected default brief](../experiments/market-brief/README.md#expected-default-brief): exactly the Markdown code-block body between `<!-- expected-start -->` and `<!-- expected-end -->`, including final LF. Exclude the fence and markers. |
+| `watchlist-changed-evidence` | [Changed Watchlist report](../evaluations/variant-expected.md#watchlist-changed-evidence), delimited by this ID. |
+| `journal-fees-gap` | [Changed Journal report](../evaluations/variant-expected.md#journal-fees-gap), delimited by this ID. |
+| `journal-empty` | [Empty Journal report](../evaluations/variant-expected.md#journal-empty), delimited by this ID. |
+| `market-changed-limited` | [Changed Market report](../evaluations/variant-expected.md#market-changed-limited), delimited by this ID. |
+| `market-empty` | [Empty Market report](../evaluations/variant-expected.md#market-empty), delimited by this ID. |
+| `market-invalid` | [Invalid Market report](../evaluations/variant-expected.md#market-invalid), delimited by this ID. |
+
+Each variant uses exactly one `<!-- expected-start: <case-id> -->` marker followed
+by a `markdown` fence, the complete report body including final LF, the closing
+fence and `<!-- expected-end: <case-id> -->`. Compare only the body bytes; exclude
+markers, fences and surrounding explanation. These are fixed reviewed outputs,
+not output regenerated from the candidate implementation. The variant file records
+its authoring environment; that observation does not establish a full gate pass.
 
 The Watchlist golden was generated on 2026-10-01 from Lab
 `c4a177467ebf02db24ae63e42f860fd39cf7e3a4` with clean Kit
@@ -173,7 +195,10 @@ record digest; otherwise a hash mismatch alone could conceal a weak fidelity che
 
 1. Change a reported source value or return an unchanged report for changed
    input: -199 back to -180, Journal 3.76 back to 4.76, or the Market title back
-   to `paper kites`. Each must fail the case's literal/full-golden checks.
+   to `paper kites`. Also leave the Watchlist summary at -199 while changing
+   only its detailed strike row back to -180, or append an invented release to
+   the changed Market report. Each must fail the full-golden comparison even
+   when required literal text and the candidate record hash still match.
 2. Delete a QQQ/SPXW gap, replace an unavailable time with zero, or label a future
    time within threshold. Even a matching report hash must not pass the golden,
    source-time object or required gap checks.
