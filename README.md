@@ -28,6 +28,9 @@ An API key alone does not grant access to these INTERNAL repositories.
 
 ## Choose an offline workflow
 
+Browse the [experiment catalogue](catalog/README.md) for declared access, costs,
+ownership and dated verification evidence.
+
 | What you want to inspect | Workflow | Inputs and limits |
 |---|---|---|
 | GEX, VEX and flow observations with visible gaps | [Watchlist Investigator](experiments/watchlist-investigator/README.md) | Fictional defaults; requires the exact pinned Kit checkout |
