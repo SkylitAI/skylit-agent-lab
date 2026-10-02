@@ -23,10 +23,11 @@ def require(condition, message):
         raise ValueError(message)
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--without-kit", action="store_true")
-    args = parser.parse_args()
+    parser.add_argument("--evaluate", action="store_true")
+    args = parser.parse_args(argv)
     require(os.geteuid() != 0, "Expected a non-root process.")
     status = Path("/proc/self/status").read_text()
     require("NoNewPrivs:\t1\n" in status and "CapEff:\t0000000000000000\n" in status,
@@ -47,6 +48,11 @@ def main():
     require(lab["state"] == "clean", "Expected clean, attributable Lab source.")
     require(not any(key.endswith(("_API_KEY", "_TOKEN")) for key in os.environ),
             "Unexpected credential environment variable.")
+    if args.evaluate:
+        from scripts.evaluate import run_suite
+        summary = run_suite(kit_root=None if args.without_kit else Path("/work/kit"))
+        print(json.dumps({"isolation": "passed", "evaluation": summary}, indent=2))
+        return 0 if summary["status"] == "passed" else 1
     completed = []
     with tempfile.TemporaryDirectory(prefix="offline-samples-") as directory:
         output = Path(directory)
@@ -80,11 +86,12 @@ def main():
                       "network_errno": result, "template": "passed", "seeds_completed": completed,
                       "watchlist": "unverified" if args.without_kit else "passed",
                       "scope": "isolation and clean samples; semantic evaluation is a separate gate"}, indent=2))
+    return 0
 
 
 if __name__ == "__main__":
     try:
-        main()
+        raise SystemExit(main())
     except (OSError, ValueError, subprocess.SubprocessError) as error:
         print(f"Isolation probe failed: {error}", file=sys.stderr)
         raise SystemExit(1)
