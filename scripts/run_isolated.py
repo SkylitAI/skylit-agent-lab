@@ -61,9 +61,11 @@ def docker_client(config):
         ).stdout.strip()
     if not endpoint.startswith("unix://") or not Path(endpoint[7:]).is_absolute():
         raise ValueError("Use a local Docker Engine through a Unix socket.")
+    discovery_env = {key: value for key, value in os.environ.items()
+                     if not key.startswith("DOCKER_") or key == "DOCKER_CONFIG"}
     plugins = json.loads(subprocess.run(
-        ["docker", "info", "--format", "{{json .ClientInfo.Plugins}}"],
-        check=True, capture_output=True, text=True, timeout=15,
+        ["docker", "--host", endpoint, "info", "--format", "{{json .ClientInfo.Plugins}}"],
+        env=discovery_env, check=True, capture_output=True, text=True, timeout=15,
     ).stdout)
     config.mkdir()
     (config / "config.json").write_text("{}\n")
