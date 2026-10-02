@@ -86,7 +86,7 @@ def docker_client(config):
     return run
 
 
-def run_probe(stage, client, without_kit):
+def run_probe(stage, client, without_kit, evaluate=False):
     container = "skylit-lab-check-" + uuid.uuid4().hex
     image = None
     try:
@@ -97,14 +97,19 @@ def run_probe(stage, client, without_kit):
             image = None
             raise ValueError("Docker did not return a valid image ID.")
         print(f"Local image: {image}", flush=True)
-        command = ["run", "--rm", "--pull", "never", "--name", container,
+        command = ["run", "--rm", "--init", "--pull", "never", "--name", container,
                    "--network", "none", "--read-only", "--cap-drop", "ALL",
                    "--security-opt", "no-new-privileges", "--user", "65534:65534",
                    "--pids-limit", "64", "--memory", "256m", "--cpus", "1",
                    "--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=128m,mode=1777", image]
         if without_kit:
             command.append("--without-kit")
-        client(*command, check=True, timeout=120)
+        if evaluate:
+            command.append("--evaluate")
+        result = client(*command, check=False, timeout=120)
+        if result.returncode not in (0, 1):
+            raise subprocess.CalledProcessError(result.returncode, command)
+        return result.returncode
     finally:
         # Names identify only this invocation; the temporary client config still exists.
         commands = [["rm", "--force", container]]
@@ -123,6 +128,7 @@ def main():
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--kit", type=Path, help="Clean local checkout at the experiment's pinned Kit revision")
     mode.add_argument("--without-kit", action="store_true", help="Check isolation and independent seeds only; Watchlist remains unverified")
+    parser.add_argument("--evaluate", action="store_true", help="Run all 12 fixed offline evaluation cases after isolation checks")
     args = parser.parse_args()
     try:
         with tempfile.TemporaryDirectory(prefix="skylit-lab-isolation-") as directory:
@@ -138,12 +144,11 @@ def main():
                 (stage / "kit/unverified.txt").write_text("Kit was explicitly omitted.\n")
                 print(f"Committed Lab: {lab_revision}; Kit: UNVERIFIED (explicitly omitted)", flush=True)
             client = docker_client(base / "client")
-            run_probe(stage, client, args.without_kit)
+            return run_probe(stage, client, args.without_kit, evaluate=args.evaluate)
     except (OSError, ValueError, subprocess.SubprocessError) as error:
         reason = str(error).rstrip(".") if isinstance(error, ValueError) else type(error).__name__
         print(f"Isolation check failed: {reason}. Check source paths, Git and Docker availability.")
         return 1
-    return 0
 
 
 if __name__ == "__main__":

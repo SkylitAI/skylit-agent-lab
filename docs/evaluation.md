@@ -7,14 +7,12 @@ vault material, account credential, live request or model output is an input.
 The fixture sources are CC0-1.0 as declared in the package guides; the new case
 variations are also dedicated to CC0-1.0 by SkylitAI. Code remains MIT licensed.
 
-This document supplies case data, report goldens and an optional explanation
-rubric. It does **not** supply an evaluator or claim that the evaluation gate has
-passed. A full gate must verify all three packages' reports, process exits and
-[private run records](run-record.md), using the actual pinned Kit checkout where
-required. Execution isolation must be implemented, reviewed and verified before
-an executable evaluator runs these cases.
-Host compatibility, paid-service access, live budgets and market freshness remain
-outside these offline cases.
+The [fixed evaluator](../scripts/evaluate.py) compares all three packages' reports,
+process exits and [private run records](run-record.md), plus one maintained Kit
+test. It runs through the Docker isolation wrapper below. This document defines
+the gate; a passing result must name the actual clean Lab revision, verified Kit
+pin and Python version. It does not establish host compatibility, paid-service
+access, live budgets, market freshness or completion of the wider release gates.
 
 ## Inert case contract
 
@@ -53,13 +51,74 @@ regenerate them from the implementation during evaluation. Parsing this file
 establishes neither execution permission nor correctness. The loader does not
 run cases, resolve input/golden IDs into files, or implement the explanation rubric.
 
-The [manifest validator](manifest.md) stays inert. The future evaluator must
-dispatch only the three fixed reviewed package runners and the named Kit test
-below. It must never execute manifest `command` arrays, shell strings, arbitrary
-Python paths, extra user arguments or commands embedded in fixture text. No
-`--fetch` path belongs to these cases. The execution boundary must bound child
-processes, exclude credentials and block network access. Those controls require
-separate implementation and verification; this case file is not a sandbox.
+The [manifest validator](manifest.md) stays inert. The evaluator dispatches only
+the three fixed reviewed package runners and the named Kit test below. Commands
+come from code, never manifest `command` arrays, expectation parameters, shell
+strings, arbitrary Python paths or fixture text. There is no `--fetch` route.
+Parsing cases alone establishes no execution permission or isolation.
+
+## Run the isolated evaluation
+
+From a clean, committed Lab checkout with Docker Engine and Buildx available:
+
+```sh
+python3 -X utf8 -I -B scripts/run_isolated.py --evaluate --kit /path/to/clean-pinned-kit
+```
+
+Use the exact Kit revision in the [Watchlist guide](../experiments/watchlist-investigator/README.md).
+The wrapper stages committed local sources without ignored files, source Git
+config, remotes, hooks or reflogs. Image setup may download its pinned base image
+and system packages; runtime has Docker networking disabled, with no host mounts
+or inherited service credentials. The non-root container has read-only source, no capabilities,
+no-new-privileges, bounded memory/processes/CPU and a private temporary filesystem.
+Docker `--init` reaps orphans. The probe checks its existing network, filesystem,
+identity, capability and credential guards before calling the evaluator. Evaluation
+mode skips duplicate template/seed smoke runs. Direct `scripts/evaluate.py`
+invocation refuses execution and prints wrapper instructions.
+
+The evaluator validates all 12 cases, the three source hashes below, all unique
+byte substitutions and all nine complete goldens before starting any child. Setup
+failure produces a structured failure with every case `not_run`. Each case gets a
+canonical private temporary directory; supplied variations are exclusive `0600`
+files. Default cases use each package's default input route. Kit is inspected
+before any Kit import and must be clean at `KIT_REVISION`; only the fixed dependency
+child prepends that verified Kit root and its tests directory to Python's path.
+
+The [process helper](../scripts/evaluation_process.py) limits each child to 20
+seconds and 64 KiB per captured stream, with at most the remaining 90-second
+monotonic suite budget. It kills the child's process group after every run and
+allows up to one extra second to reap its direct child. After the suite deadline,
+no further child launches; remaining cases are `not_run` with `suite_timeout`.
+Timeouts, stream limits and cleanup failures fail even if a leader exited 0.
+These limits bound the reviewed child path, not arbitrary hostile code escaping a
+process group or a hard deadline on the Docker image build.
+
+The printed JSON has `schema_version: 1`, an overall status, fixed reason codes,
+all 12 case IDs/statuses, actual Lab/Kit observations, Python version and scope.
+Workflow entries include `prepared_input_sha256` and `expected_report_sha256`
+(null when no report is expected); these identify prepared synthetic evidence and
+reviewed expectations, not observed output digests. A `passed` workflow also means
+the comparator verified its actual report/record hashes, full golden bytes,
+provenance, source times, limits, usage and expected exit. Child output, report text,
+raw errors and private temporary paths are not printed. Artifacts are discarded
+with their temporary directory. Execution timestamps stay in the compared records;
+they are not golden constants, and finish may precede start after a clock change.
+
+All 12 cases must pass for exit 0. A completed container evaluation returning 1
+keeps that exit status without a misleading Docker/setup failure message. Build,
+start and wrapper timeout errors remain separate infrastructure failures. To
+check the independent cases without Kit:
+
+```sh
+python3 -X utf8 -I -B scripts/run_isolated.py --evaluate --without-kit
+```
+
+That evaluation must exit **1**, with eight independent cases passed and four
+Watchlist/dependency cases unverified. Missing, dirty or wrong-pin Kit inside the
+container has the same unverified meaning; the wrapper rejects dirty local source
+before staging. Without `--evaluate`, `--without-kit` retains the narrower isolation
+smoke check, which can succeed without Kit. Neither result verifies live services,
+host/model behavior or the optional explanation rubric.
 
 ## Sources and goldens
 
@@ -99,8 +158,10 @@ different fixture values and is not interchangeable with this package golden.
 
 Journal and Market writers persist UTF-8/LF bytes. Watchlist's pinned text writer
 uses native newline translation: on a platform that translates LF to CRLF,
-translate this LF golden once for byte comparison. Always hash the actual
-persisted report bytes; do not normalize bytes before checking record hashes.
+a separate consumer would need to translate this LF golden once for byte comparison.
+The Linux evaluator compares the exact supplied golden bytes without normalization.
+Always hash the actual persisted report bytes; do not normalize bytes before
+checking record hashes.
 The macOS generation observation does not certify Windows behavior.
 
 ## Fixed input variations
@@ -187,7 +248,7 @@ A full gate requires all 12 cases with the real pinned checkout; do not download
 Kit, request credentials, skip failures silently or treat unverified cases as a
 successful full evaluation.
 
-## Negative checks for the future evaluator
+## Evaluator regression checks
 
 Evaluator regression tests must change candidate results while leaving
 expectations fixed. When tampering with a report, also update its candidate
