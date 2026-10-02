@@ -15,7 +15,10 @@ Never request credentials in chat or commit private reports. Watchlist
 Investigator and Journal Reviewer run offline. Market Brief defaults to offline
 input and offers an explicit `--fetch` for one fixed public Federal Reserve feed,
 without authentication. Authenticated or metered service calls require the user's
-authorized account and budget; live Skylit integration remains pending.
+authorized account and budget. The separate `scripts/watchlist_live.py` entry
+point defaults to dry-run and requires explicit `--live` for bounded pinned-Kit
+requests; authenticated service verification remains pending. Tests use synthetic
+responses only.
 Do not install global agent configuration or change repository visibility as part
 of a template run. Do not claim a host, source or integration is verified without
 a dated result for the actual version and environment.
