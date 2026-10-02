@@ -74,6 +74,29 @@ class EvaluationCaseTests(unittest.TestCase):
             data["cases"] = entries
             self.reject(data)
 
+    def test_every_report_case_requires_its_own_complete_golden(self):
+        report_cases = 0
+        for index, case in enumerate(self.data["cases"]):
+            if case["scope"] != "lab_workflow":
+                continue
+            has_report = case["expected"]["output_state"] == "complete"
+            self.assertEqual(case["expected"]["golden"], case["id"] if has_report else None)
+            report_cases += has_report
+            data = copy.deepcopy(self.data)
+            data["cases"][index]["expected"]["golden"] = None if has_report else "watchlist-default"
+            self.reject(data)
+        self.assertEqual(report_cases, 9)
+
+    def test_report_presence_cannot_disagree_with_fixed_golden(self):
+        data = copy.deepcopy(self.data)
+        data["cases"][2]["expected"] = copy.deepcopy(data["cases"][0]["expected"])
+        data["cases"][2]["expected"]["golden"] = None
+        self.reject(data)
+        data = copy.deepcopy(self.data)
+        data["cases"][0]["expected"] = copy.deepcopy(data["cases"][2]["expected"])
+        data["cases"][0]["expected"]["golden"] = "watchlist-default"
+        self.reject(data)
+
     def test_unknown_keys_are_rejected_in_each_metadata_object(self):
         paths = [(), ("cases", 0), ("cases", 0, "expected"), ("cases", 0, "expected", "outcome"),
                  ("cases", 0, "expected", "parameters"), ("cases", 0, "expected", "source_time"),

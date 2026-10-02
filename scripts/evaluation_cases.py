@@ -11,17 +11,17 @@ MAX_CASE_BYTES = 65536
 # Case IDs bind to reviewed scope, experiment, input and golden IDs, never paths.
 IDENTITIES = {
     "watchlist-default": ("lab_workflow", "watchlist-investigator", "watchlist-bundled", "watchlist-default"),
-    "watchlist-changed-evidence": ("lab_workflow", "watchlist-investigator", "watchlist-changed-evidence", None),
+    "watchlist-changed-evidence": ("lab_workflow", "watchlist-investigator", "watchlist-changed-evidence", "watchlist-changed-evidence"),
     "watchlist-invalid": ("lab_workflow", "watchlist-investigator", "invalid-json", None),
     "kit-budget-stop": ("kit_dependency", "watchlist-investigator", "kit-budget-fixtures", None),
     "journal-default": ("lab_workflow", "journal-reviewer", "journal-bundled", "journal-default"),
-    "journal-fees-gap": ("lab_workflow", "journal-reviewer", "journal-fees-gap", None),
-    "journal-empty": ("lab_workflow", "journal-reviewer", "journal-header-only", None),
+    "journal-fees-gap": ("lab_workflow", "journal-reviewer", "journal-fees-gap", "journal-fees-gap"),
+    "journal-empty": ("lab_workflow", "journal-reviewer", "journal-header-only", "journal-empty"),
     "journal-open": ("lab_workflow", "journal-reviewer", "journal-missing-exit", None),
     "market-default": ("lab_workflow", "market-brief", "market-bundled", "market-default"),
-    "market-changed-limited": ("lab_workflow", "market-brief", "market-changed-title", None),
-    "market-empty": ("lab_workflow", "market-brief", "market-empty-channel", None),
-    "market-invalid": ("lab_workflow", "market-brief", "invalid-xml", None),
+    "market-changed-limited": ("lab_workflow", "market-brief", "market-changed-title", "market-changed-limited"),
+    "market-empty": ("lab_workflow", "market-brief", "market-empty-channel", "market-empty"),
+    "market-invalid": ("lab_workflow", "market-brief", "invalid-xml", "market-invalid"),
 }
 
 
@@ -77,6 +77,7 @@ def _workflow(case, golden):
     _require(outcome["reason"] == ("completed" if completed else invalid))
     _require(records._integer(expected["exit_code"], 0, 1) and expected["exit_code"] == (0 if completed else 1))
     has_report = completed or not (watchlist or journal)
+    _require(has_report == (golden is not None))
     _require(expected["output_state"] == ("complete" if has_report else "not_written"))
     times = expected["source_time"]
     if not has_report:
