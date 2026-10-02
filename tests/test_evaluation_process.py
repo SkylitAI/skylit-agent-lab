@@ -1,6 +1,7 @@
 """Only local synthetic children exercise the evaluator's process limits."""
 
 import contextlib
+import errno
 import io
 import os
 from pathlib import Path
@@ -165,7 +166,7 @@ while not Path('heartbeat').exists():
             if sys.platform.startswith("linux"):
                 try:
                     state = Path(f"/proc/{pid}/stat").read_text().rsplit(")", 1)[1].split()[0]
-                except FileNotFoundError:
+                except (FileNotFoundError, ProcessLookupError):
                     break
                 if state == "Z":  # Orphan reaping belongs to the container's init.
                     break
@@ -183,6 +184,27 @@ while not Path('heartbeat').exists():
         self.assertEqual(result["exit_code"], 0)
         self.assertLess(time.monotonic() - started, 1.5)
         self.assert_descendant_stopped(result)
+
+    def test_proc_disappearance_is_terminal_but_permission_denial_is_not(self):
+        heartbeat = self.root / "heartbeat"
+        heartbeat.write_bytes(b"stable synthetic heartbeat")
+        errors = (FileNotFoundError(errno.ENOENT, "Synthetic process removed"),
+                  ProcessLookupError(errno.ESRCH, "Synthetic process disappeared during read"),
+                  PermissionError(errno.EACCES, "Synthetic permission denial"))
+        for error in errors:
+            with self.subTest(error=type(error).__name__), \
+                    patch.object(sys, "platform", "linux"), patch.object(os, "kill") as probe, \
+                    patch.object(Path, "read_text", autospec=True, side_effect=error) as read, \
+                    patch.object(time, "sleep"):
+                if isinstance(error, PermissionError):
+                    with self.assertRaises(PermissionError) as caught:
+                        self.assert_descendant_stopped({"stdout": b"999999\n"})
+                    self.assertIs(caught.exception, error)
+                else:
+                    self.assert_descendant_stopped({"stdout": b"999999\n"})
+                probe.assert_called_once_with(999999, 0)
+                read.assert_called_once_with(Path("/proc/999999/stat"))
+                self.assertEqual(heartbeat.read_bytes(), b"stable synthetic heartbeat")
 
     def test_normal_leader_exit_also_kills_descendant_with_closed_pipes(self):
         result = self.run_python(self.descendant_parent(close_pipes=True), 2)
