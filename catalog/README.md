@@ -45,7 +45,7 @@ Render selected fictional watchlist symbols through Agent Kit while preserving u
 |---|---|
 | Maturity | Experimental |
 | Owner (declared) | &#64;prodij |
-| Access (declared) | Python 3&#46;11&#43; with UTF&#45;8 text mode &#40;&#45;X utf8&#41;&#44; Git&#44; the full Lab checkout and an explicitly supplied clean local Kit checkout at the pinned revision&#46; No account&#44; key&#44; model or runtime network&#46; Obtaining an INTERNAL Kit repository requires separate repository access&#46; |
+| Access (declared) | Python 3&#46;11&#43; with UTF&#45;8 text mode &#40;&#45;X utf8&#41;&#44; Git&#44; the full Lab checkout and an explicitly supplied clean local Kit checkout at the pinned revision&#46; No account&#44; key&#44; model or runtime network&#46; The pinned Kit repository is public&#46; |
 | Cost (declared) | Zero API credits or model usage&#59; local compute only&#46; |
 | Offline verification | Historical offline pass recorded 2026-10-02 at [dc530976b58fcc86db104ac7a173fca975c3718a](https://github.com/SkylitAI/skylit-agent-lab/commit/dc530976b58fcc86db104ac7a173fca975c3718a); see the evidence below |
 | Native agent hosts | Unverified |

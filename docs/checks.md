@@ -31,10 +31,12 @@ integration evidence.
 
 GitHub Actions runs the same checks on Python 3.11 and 3.14 using synthetic local
 inputs and no service credentials. Setup downloads Python and pinned actions;
-this workflow does not claim network isolation. CI does not obtain Kit or add a
-cross-repository token, so its Kit-dependent tests remain skipped and unverified.
+this workflow does not claim network isolation. The public-preview workflow checks
+out the exact public Kit pin without a cross-repository secret and supplies
+`SKYLIT_AGENT_KIT`. The separate Docker job runs all 12 offline evaluation cases.
+Check the actual run for skips and failures before claiming hosted coverage.
 
-### Hosted Kit coverage prerequisite
+### Historical hosted Kit coverage limitation (2026-10-01)
 
 Read-only settings inspection on 2026-10-01 found both repositories INTERNAL,
 Lab's default workflow token read-only, no repository or inherited organization
@@ -59,7 +61,7 @@ The 34 skipped cases are:
 | `test_watchlist_live` | 6 |
 | `test_watchlist_records` | 7 |
 
-Closing hosted coverage requires owner-approved read access to Kit for a trusted
+At that time, closing hosted coverage required owner-approved read access to Kit for a trusted
 integration job, such as a GitHub App installation token or fine-grained token
 limited to Kit's `Contents: read`. No such CI credential is configured here. Its
 setup and trust boundary require separate approval; do not expose it to untrusted
@@ -82,3 +84,7 @@ that those controls are already configured.
 For a review record, include the revision, environment, exact commands, observed
 results, AI slop findings/fixes and remaining limitations. A passing foundation
 check does not establish trading performance or complete the community pilot.
+
+The public-preview workflow supersedes that historical access prerequisite: Kit
+is now public. Public visibility alone is not test evidence; the pinned tests
+and Docker evaluation must still pass at the release revision.

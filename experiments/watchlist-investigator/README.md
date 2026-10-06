@@ -7,9 +7,8 @@ package, maintained by `@prodij`; no agent host or live service is certified.
 
 Keep this package inside the full Lab checkout: it reuses
 `scripts/probe_kit_watchlist.py`. Use Python 3.11+, Git, and a clean Kit checkout
-at **`0f82039759ef4db9d5b3dbd90f52863f8074f2a6`**. This tested baseline is not
-the final release pin. Obtaining Kit while it is INTERNAL requires repository
-access; rendering after setup needs no network or service credentials.
+at **`0f82039759ef4db9d5b3dbd90f52863f8074f2a6`**. This is the public preview pin. Kit is public;
+rendering after setup needs no network or service credentials.
 
 From the Lab root, obtain Kit in a **new directory** and run the experiment:
 

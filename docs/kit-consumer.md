@@ -11,8 +11,7 @@ Use Python 3.11+, Git, and an already available clean checkout of
 **`0f82039759ef4db9d5b3dbd90f52863f8074f2a6`**. This is the tested starting
 baseline, not a final release pin. Runtime imports are the standard library and
 this Kit checkout; no installation, network, account, key or model is required.
-Obtaining Kit while its repository is INTERNAL separately requires repository
-access.
+Kit is public; cloning it requires network access but no Skylit account.
 
 From the Lab root, with Kit in the sibling directory:
 

@@ -1,7 +1,7 @@
 # Which agent do you use?
 
 Run an example, adapt it with your existing agent, then contribute a small
-experiment. You need repository access, Git and Python 3.11+. No Python packages,
+experiment. You need Git and Python 3.11+. No Python packages,
 Skylit key or model are needed for the offline examples. Journal Reviewer and
 Market Brief do not need Kit; Watchlist uses the documented exact Kit pin. On Windows, replace
 `python3` with `py -3`; native Windows execution remains unverified.
@@ -9,8 +9,7 @@ Market Brief do not need Kit; Watchlist uses the documented exact Kit pin. On Wi
 Lab currently provides deterministic Python workflows. Your coding agent can
 help run, explain and edit them; the workflows themselves do not call a model or
 act autonomously. Agent subscriptions and model-provider credentials are separate
-from a Skylit key. Both repositories are INTERNAL, so a key does not grant GitHub
-access. There is no released Lab installer or self-contained Watchlist bundle yet.
+from a Skylit key. Both repositories are public. There is no released Lab installer or self-contained Watchlist bundle yet.
 
 ## Choose a path
 
@@ -228,13 +227,13 @@ manifest never proves source permission, host support or trading performance.
 Follow [CONTRIBUTING.md](../CONTRIBUTING.md) to submit a focused PR with your exact
 commands, results, source disclosures and limitations. Review generated commands
 before executing them and keep output private by default. Outside contributors
-need repository access until a public preview and fork workflow are verified.
+can fork the public repository and submit a PR.
 
 ## If setup stops
 
 | Symptom | Next step |
 |---|---|
-| GitHub denies access | Request repository access; a Skylit key cannot fix GitHub permissions |
+| GitHub denies access | Check the public URL and local Git credential/proxy settings; no Skylit key is needed |
 | Python is missing or too old | Check Python 3.11+ in the environment that actually runs commands; on Windows try `py -3 --version` |
 | Kit revision/cleanliness refused | Use the documented separate pinned checkout; do not reset unrelated changes |
 | Seed report or sidecar already exists | Choose a new `--output` filename; preserve both existing files |

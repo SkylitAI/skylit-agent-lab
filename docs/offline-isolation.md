@@ -43,16 +43,16 @@ Only the template output is compared with a full golden here; source-value and
 failure-case evaluation belongs to the separate evaluator. No command from an
 experiment manifest is executed.
 
-While Kit is INTERNAL, secret-free hosted CI cannot obtain it. CI explicitly runs:
+CI checks out the public Kit repository at the exact reviewed pin and runs the
+full isolation probe and 12-case evaluation. A local run without Kit is also available:
 
 ```sh
 python3 scripts/run_isolated.py --without-kit
 ```
 
-This checks isolation, the template, Journal and Market. It reports Watchlist as
-**unverified**, never as passed. Full evaluation/release acceptance still needs
-the real pinned Kit. Neither invocation verifies model hosts, live sources,
-human usability or a security boundary beyond the tested Docker configuration.
+That reduced check covers isolation, the template, Journal and Market. It reports
+Watchlist as **unverified**, never as passed. Neither mode verifies model hosts,
+live sources, human usability or a security boundary beyond the tested Docker configuration.
 
 The build can use the network; the later probe cannot. No model or service key
 is needed. See [Docker's run reference](https://docs.docker.com/engine/containers/run/)

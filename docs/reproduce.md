@@ -15,8 +15,7 @@ You need Git, Python 3.11 or later, and Docker Engine with Buildx through a loca
 Unix socket. The supported execution path uses a Linux container from macOS or
 Linux; this guide does not certify Windows. Image setup may download the pinned
 base image and system packages. The later evaluation runs with networking disabled.
-No service credential is needed; obtaining the Kit repository requires repository
-access while it is INTERNAL.
+No service credential is needed; both repositories are public.
 
 Take the full, lowercase 40-character **Lab commit SHA from the result you intend
 to reproduce**. Do not replace it with a moving branch name or derive your expected

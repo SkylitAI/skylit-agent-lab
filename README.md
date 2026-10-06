@@ -5,12 +5,12 @@ community experiments; [Agent Kit](https://github.com/SkylitAI/skylit-agent-kit)
 holds maintained tools and starter workflows. Useful Lab work can graduate into
 Kit through review.
 
-**Status: three runnable research seeds: Watchlist Investigator, Journal Reviewer
-and Market Brief.** Their defaults use fictional inputs and need no account,
+**Status: experimental public preview.** Three runnable research seeds: Watchlist Investigator, Journal Reviewer
+and Market Brief. Their defaults use fictional inputs and need no account,
 API key, model or installed Python packages. Only Watchlist requires a pinned
 Agent Kit checkout. Agent integrations are planned; this repository does
-not yet certify any agent host or live service. Repository access is required
-while the pilot is INTERNAL.
+not yet certify any agent host or live service. Fork the repo, run a seed, and
+share a focused experiment or reproduction.
 
 ## Which agent do you use?
 
@@ -24,7 +24,7 @@ A Skylit API key is separate from your agent's subscription or model-provider
 credentials. The default examples are **offline deterministic workflows**. A separate
 [opt-in live entry point](docs/using-your-agent.md#use-your-skylit-key-locally)
 uses the pinned Kit client; authenticated verification remains pending.
-An API key alone does not grant access to these INTERNAL repositories.
+Both Lab and Kit are public; offline examples need no Skylit subscription.
 
 ## Choose an offline workflow
 
@@ -66,6 +66,13 @@ local report while keeping missing components visible.
 Already have clean Lab and pinned Kit checkouts? [Prepare a local Watchlist
 workspace](docs/local-watchlist-setup.md) with one command. It copies committed
 files into a new directory and runs the fictional demo; no key or network is used.
+
+## Try the Docker prototype
+
+The [Watchlist Desk](prototypes/watchlist-desk/README.md) turns two fictional
+snapshots into a local HTML viewer and structured comparison. Follow its guide
+to build and test in Docker. This prototype demonstrates data-to-UI plumbing;
+it does not validate a trading strategy or a model agent.
 
 ## Contribute an experiment
 

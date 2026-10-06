@@ -12,8 +12,8 @@ history. Renamed variables or fictional inputs do not make a private algorithm
 publishable. Do not mount or index private vaults in distributable agent setups.
 
 Do not commit keys, account identifiers, private journals or raw authenticated
-responses. Ignore local reports. A future live workflow must use documented access
-and explicit budgets; no live functionality is part of the foundation.
+responses. Ignore local reports. The separate opt-in live entry point uses documented access
+and explicit budgets; its authenticated verification remains pending.
 
 ## What validation establishes
 
@@ -30,8 +30,7 @@ tests and workflow files as executable code requiring review. Do not use
 ## Report a possible disclosure
 
 Do not include the suspected secret, private formula or affected private payload
-in a public issue or PR. Notify the repository owner through an existing private
-channel and stop further distribution of the affected artifact. If private GitHub
-vulnerability reporting is available, it is also suitable; its setup remains a
-public-release requirement. Coordinate credential rotation or history remediation
+in a public issue or PR. Use [GitHub private vulnerability reporting](https://github.com/SkylitAI/skylit-agent-lab/security/advisories/new)
+and stop further distribution of the affected artifact. If unavailable, contact
+the repository owner through an existing private channel. Coordinate credential rotation or history remediation
 with the owner. Deleting the latest file alone does not remove Git history.
