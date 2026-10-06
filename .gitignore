@@ -9,3 +9,4 @@ __pycache__/
 reports/
 .DS_Store
 *.run.json
+.dependencies/

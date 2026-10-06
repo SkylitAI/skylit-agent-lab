@@ -2,8 +2,8 @@
 
 Start with a small experiment, a reproducible bug, an improved explanation or an
 independent reproduction. Use issues for proposals and focused PRs for changes.
-Repository access is currently limited by its INTERNAL visibility; the outside
-fork workflow will be tested when a public preview opens.
+The public preview accepts forks and pull requests. Independent newcomer
+reproductions remain pending; please include your environment and results.
 
 Using an existing coding agent? Follow [Which agent do you use?](docs/using-your-agent.md)
 for the shared prompt, offline setup and contribution walkthrough. A terminal
@@ -13,7 +13,7 @@ works too; no model is required to contribute a deterministic example.
 
 1. Read the [README](README.md), [manifest contract](docs/manifest.md) and
    [source rules](SECURITY.md).
-2. Branch from `main` (fork first when outside contribution is available).
+2. Fork the repository, then branch from `main`.
 3. Copy `templates/experiment` into `experiments/<your-id>` and change its ID and
    owner. Supply a real offline command, fixture, expected result and README.
 4. Declare actual access, costs, sources and dependencies. Pin a full Kit commit
@@ -56,8 +56,7 @@ git push -u github HEAD
 Review the staged diff and commit only your intended source changes before
 pushing. Open a draft PR for that branch through GitHub. If `github` already
 exists, verify its destination instead of replacing it. Contributors without
-write access need an authorized fork or maintainer-assisted route; INTERNAL
-visibility currently limits outside access. Do not push generated reports or keys.
+write access should push to their own fork and open a PR against this repository. Do not push generated reports or keys.
 
 ## Before review
 

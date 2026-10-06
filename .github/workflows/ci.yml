@@ -23,17 +23,17 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Validate metadata without running commands
         run: python scripts/validate_experiments.py
-      - name: Explain hosted integration coverage
-        run: |
-          cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
-          ### Kit integration coverage
-          This job does not check out the internal Kit repository. Kit-dependent
-          skips in the test output are unverified hosted coverage, even when the
-          job passes. See docs/checks.md for the pinned local verification and
-          the separate cross-repository access prerequisite.
-          EOF
+      - name: Check out public Kit at the reviewed pin
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: SkylitAI/skylit-agent-kit
+          ref: 0f82039759ef4db9d5b3dbd90f52863f8074f2a6
+          path: .dependencies/kit
+          persist-credentials: false
       - name: Test behavior and failure cases
         run: python -m unittest discover -s tests -v
+        env:
+          SKYLIT_AGENT_KIT: ${{ github.workspace }}/.dependencies/kit
       - name: Check syntax
         run: python -m compileall -q scripts tests templates/experiment experiments
       - name: Run the reviewed synthetic template
@@ -51,5 +51,12 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.11'
-      - name: Prove isolation and run independent offline seeds (Kit unverified)
-        run: python scripts/run_isolated.py --without-kit
+      - name: Check out public Kit at the reviewed pin
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: SkylitAI/skylit-agent-kit
+          ref: 0f82039759ef4db9d5b3dbd90f52863f8074f2a6
+          path: .dependencies/kit
+          persist-credentials: false
+      - name: Prove isolation and evaluate all offline seeds
+        run: python scripts/run_isolated.py --kit .dependencies/kit --evaluate

@@ -17,7 +17,7 @@ workspace includes the full Lab checkout: enter `lab/` to use those commands.
 - A separate clean Kit Git checkout at
   `0f82039759ef4db9d5b3dbd90f52863f8074f2a6`. Use the existing
   [Watchlist setup instructions](../experiments/watchlist-investigator/README.md)
-  to obtain it. Both repositories are INTERNAL and require GitHub access.
+  to obtain it. Both repositories are public.
 - A new destination outside both source checkouts, with an existing parent.
   Preserve work in a dirty checkout; use a separate clean checkout rather than
   resetting or discarding changes.

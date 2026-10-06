@@ -1,4 +1,4 @@
-# Current scope
+# Experimental public preview
 
 Lab supplies three experimental workflows that save private local Markdown
 reports and validated run records, plus a runnable synthetic template, metadata
@@ -18,7 +18,7 @@ point reuses pinned Kit clients; its verification uses mocked service responses.
 | Muse | Provisional Muse Code CLI discovery recorded in the [host matrix](host-matrix.md); model access and Watchlist execution unverified |
 | Custom agents | Can invoke documented commands; integration example planned |
 | Live Skylit data | Separate pinned-Kit entry point with explicit opt-in and request/credit/time caps; mocked verification passed, authenticated service verification and live run records pending |
-| Public contribution | Outside access and fork CI remain unverified; publication is a separate release action |
+| Public contribution | Public forks and PRs are the contribution path; independent newcomer and outside-fork CI trials remain pending |
 
 Watchlist's source-time comparisons use a declared fictional reference and
 demonstration age threshold. Market preserves publication times separately from
@@ -36,8 +36,9 @@ Report and record writes are not atomic, so check command exit status as well as
 artifact contents. A Market gap report can be complete while its outcome remains
 stopped.
 
-The full release gates remain pending: named review ownership, source and license
-review, relevant live Skylit and host evidence, independent human reproductions,
+The public preview makes experimental code available for inspection and contribution.
+It does not promote experiments to maintained status. Full release gates remain
+pending: named specialist review ownership, relevant live Skylit and host evidence, independent human reproductions,
 and an observed newcomer trial. The [offline evaluation cases](evaluation.md)
 define fixed source, gap and report checks; their scope excludes host certification
 and live access. A paper-trading workflow remains later work; reviewing supplied
